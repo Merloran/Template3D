@@ -15,6 +15,7 @@
 
 void SResourceManager::startup()
 {
+	SPDLOG_INFO("Resource Manager startup.");
 	Material defaultMaterial;
 	defaultMaterial.albedo			 = load_texture(TEXTURES_PATH + "Default/Albedo.png", "DefaultBaseColor", ETextureType::Albedo);
 	defaultMaterial.normal			 = load_texture(TEXTURES_PATH + "Default/Normal.png", "DefaultNormal", ETextureType::Normal);
@@ -22,11 +23,6 @@ void SResourceManager::startup()
 	defaultMaterial.metalness		 = load_texture(TEXTURES_PATH + "Default/Metalness.png", "DefaultMetalness", ETextureType::Metalness);
 	defaultMaterial.ambientOcclusion = load_texture(TEXTURES_PATH + "Default/AmbientOcclusion.png", "DefaultAmbientOcclusion", ETextureType::AmbientOcclusion);
 	create_material(defaultMaterial, "DefaultMaterial");
-}
-
-SResourceManager::~SResourceManager()
-{
-	shutdown();
 }
 
 SResourceManager& SResourceManager::get()
@@ -370,6 +366,7 @@ const std::vector<Texture>& SResourceManager::get_textures() const
 
 void SResourceManager::shutdown()
 {
+	SPDLOG_INFO("Resource Manager shutdown.");
 	nameToIdTextures.clear();
 	for (Texture& texture : textures)
 	{

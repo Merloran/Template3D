@@ -24,7 +24,6 @@ public:
 	const std::string ASSETS_PATH	= "Resources/Assets/";
 
 	SResourceManager(SResourceManager&) = delete;
-	~SResourceManager();
 
 	static SResourceManager& get();
 	void startup();
@@ -77,6 +76,7 @@ protected:
 
 private:
 	SResourceManager() = default;
+	~SResourceManager() = default;
 
 	std::unordered_map<std::string, Handle<Model>> nameToIdModels;
 	std::vector<Model> models;
