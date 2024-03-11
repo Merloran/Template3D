@@ -2,7 +2,7 @@
 #include "Managers/Display/display_manager.hpp"
 
 
-int main()
+Int32 main()
 {
 	SResourceManager& resourceManager = SResourceManager::get();
 	SDisplayManager& displayManager = SDisplayManager::get();
@@ -13,7 +13,7 @@ int main()
 
 	while (!displayManager.should_window_close())
 	{
-		displayManager.update();
+		displayManager.poll_events();
 	}
 
 	resourceManager.shutdown();

@@ -2,8 +2,9 @@
 
 struct Mesh 
 {
-	std::vector<glm::vec3> positions;
-	std::vector<glm::vec3> normals;
-	std::vector<glm::vec2> uvs;
-	std::vector<UInt32> indexes;
+	DynamicArray<FVector3> positions;
+	DynamicArray<FVector3> normals;
+	DynamicArray<FVector2> uvs;
+	DynamicArray<UInt32> indexes;
+	String name;
 };

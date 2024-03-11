@@ -2,11 +2,14 @@
 
 template<typename Type>
 struct Handle;
+struct Mesh;
+struct Material;
 
 /** It's just set of meshes and materials */
 struct Model
 {
-	std::vector<Handle<struct Mesh>> meshes;
-	std::vector<Handle<struct Material>> materials;
-	std::string directory;
+	DynamicArray<Handle<Mesh>> meshes;
+	DynamicArray<Handle<Material>> materials;
+	String directory;
+	String name;
 };

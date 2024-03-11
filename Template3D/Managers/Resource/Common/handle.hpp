@@ -1,7 +1,8 @@
 #pragma once
 
 template<typename Type>
-struct Handle {
+struct Handle
+{
 	Int32 id;
 
 	static const Handle<Type> sNone;

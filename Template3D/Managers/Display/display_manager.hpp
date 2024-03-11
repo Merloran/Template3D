@@ -4,26 +4,30 @@ class SDisplayManager
 {
 public:
 	SDisplayManager(SDisplayManager&) = delete;
-	static SDisplayManager& get();
+	static SDisplayManager &get();
 
 	void startup();
 
-	const glm::ivec2& get_framebuffer_size();
-	const glm::ivec2& get_window_size();
+	[[nodiscard]]
+	const IVector2 &get_framebuffer_size();
+	[[nodiscard]]
+	const IVector2 &get_window_size();
+	[[nodiscard]]
+	Float32			get_aspect_ratio() const;
 
-	void update();
+	Void poll_events();
+	[[nodiscard]]
+	Bool should_window_close() const;
 
-	bool should_window_close();
-
-	void shutdown();
+	Void shutdown();
 
 private:
-	SDisplayManager() = default;
+	SDisplayManager()  = default;
 	~SDisplayManager() = default;
 
-	std::string name		  = "BaseWindow";
+	String name				  = "BaseWindow";
 	struct GLFWwindow* window = nullptr;
-	glm::ivec2 windowSize	  = { 1024, 768 };
-	glm::ivec2 framebufferSize;
+	IVector2 windowSize		  = { 1024, 768 };
+	IVector2 framebufferSize{};
 };
 
