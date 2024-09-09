@@ -1,4 +1,5 @@
 #pragma once
+#include <GLFW/glfw3.h>
 // Rename to be consistent with naming_convention
 using Bool	  = bool;
 using Char	  = char;
@@ -54,3 +55,5 @@ using DMatrix4	   = glm::dmat4;
 using FMatrix2	   = glm::mat2;
 using FMatrix3	   = glm::mat3;
 using FMatrix4	   = glm::mat4;
+
+using Window	   = GLFWwindow*;

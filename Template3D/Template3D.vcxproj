@@ -132,7 +132,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ForcedIncludeFiles>pch.hpp</ForcedIncludeFiles>
@@ -141,7 +141,7 @@
       <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
       <ExternalTemplatesDiagnostics>false</ExternalTemplatesDiagnostics>
       <DisableAnalyzeExternal>true</DisableAnalyzeExternal>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
@@ -155,7 +155,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ForcedIncludeFiles>pch.hpp</ForcedIncludeFiles>
@@ -164,7 +164,7 @@
       <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
       <ExternalTemplatesDiagnostics>false</ExternalTemplatesDiagnostics>
       <DisableAnalyzeExternal>true</DisableAnalyzeExternal>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
@@ -181,7 +181,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Managers\Resource\Common\handle.cpp" />
+    <ClCompile Include="Core\Utilities\handle.cpp" />
     <ClCompile Include="Managers\Resource\resource_manager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Managers\Display\display_manager.cpp" />
@@ -189,11 +189,14 @@
   <ItemGroup>
     <ClInclude Include="Core\pch.hpp" />
     <ClInclude Include="Core\Utilities\types.hpp" />
-    <ClInclude Include="Managers\Resource\Common\handle.hpp" />
+    <ClInclude Include="Managers\Display\Common\hint.hpp" />
+    <ClInclude Include="Managers\Resource\Common\color.hpp" />
+    <ClInclude Include="Core\Utilities\handle.hpp" />
     <ClInclude Include="Managers\Resource\Common\material.hpp" />
     <ClInclude Include="Managers\Resource\Common\mesh.hpp" />
     <ClInclude Include="Managers\Resource\Common\model.hpp" />
     <ClInclude Include="Managers\Resource\Common\texture.hpp" />
+    <ClInclude Include="Managers\Resource\Common\vertex.hpp" />
     <ClInclude Include="Managers\Resource\resource_manager.hpp" />
     <ClInclude Include="Managers\Display\display_manager.hpp" />
   </ItemGroup>

@@ -1,7 +1,5 @@
 #pragma once
 
-template<typename Type>
-struct Handle;
 struct Mesh;
 struct Material;
 
@@ -12,4 +10,6 @@ struct Model
 	DynamicArray<Handle<Material>> materials;
 	String directory;
 	String name;
+
+	Model() = default;
 };

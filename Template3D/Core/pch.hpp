@@ -9,3 +9,4 @@
 #include <glm/gtx/string_cast.hpp>
 #include <spdlog/spdlog.h>
 #include "Utilities/types.hpp"
+#include "Utilities/handle.hpp"

@@ -3,7 +3,6 @@
 template<typename Type>
 struct Handle
 {
-	Int32 id;
-
-	static const Handle<Type> sNone;
+    UInt64 id;
+    static const Handle NONE;
 };

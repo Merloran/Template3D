@@ -24,7 +24,7 @@
     <ClCompile Include="Managers\Resource\resource_manager.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
-    <ClCompile Include="Managers\Resource\Common\handle.cpp">
+    <ClCompile Include="Core\Utilities\handle.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
     <ClCompile Include="Managers\Display\display_manager.cpp">
@@ -50,13 +50,22 @@
     <ClInclude Include="Managers\Resource\Common\material.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-    <ClInclude Include="Managers\Resource\Common\handle.hpp">
+    <ClInclude Include="Core\Utilities\handle.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
     <ClInclude Include="Managers\Display\display_manager.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
     <ClInclude Include="Core\pch.hpp">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="Managers\Resource\Common\color.hpp">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="Managers\Resource\Common\vertex.hpp">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="Managers\Display\Common\hint.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
   </ItemGroup>

@@ -4,12 +4,14 @@
 
 Int32 main()
 {
-	SResourceManager& resourceManager = SResourceManager::get();
-	SDisplayManager& displayManager = SDisplayManager::get();
+	ResourceManager& resourceManager = ResourceManager::get();
+	DisplayManager& displayManager = DisplayManager::get();
 
 	displayManager.startup();
+	displayManager.set_current_window(displayManager.create_preset_window("Template3D", 
+                                                                                { 1024, 768 }, 
+                                                                                EWindowPreset::OpenGL));
 	resourceManager.startup();
-	resourceManager.load_gltf_asset("Resources/Assets/Gun/weapon.gltf");
 
 	while (!displayManager.should_window_close())
 	{
