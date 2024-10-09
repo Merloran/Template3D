@@ -1,5 +1,4 @@
 #pragma once
-#include <GLFW/glfw3.h>
 // Rename to be consistent with naming_convention
 using Bool	  = bool;
 using Char	  = char;
@@ -22,11 +21,19 @@ using Float64 = double;
 using String	   = std::string;
 
 template<typename Type>
+using Limits	   = std::numeric_limits<Type>;
+template<typename Type>
+using Optional	   = std::optional<Type>;
+template<typename Type>
 using List		   = std::list<Type>;
 template<typename Type>
 using DynamicArray = std::vector<Type>;
+template<typename Type>
+using Set		   = std::set<Type>;
 template<typename Type, UInt64 Count>
 using Array		   = std::array<Type, Count>;
+template<typename FirstType, typename SecondType>
+using Pair		   = std::pair<FirstType, SecondType>;
 template<typename KeyType, typename ValueType>
 using HashMap	   = std::unordered_map<KeyType, ValueType>;
 template<typename KeyType, typename ValueType>
@@ -55,5 +62,3 @@ using DMatrix4	   = glm::dmat4;
 using FMatrix2	   = glm::mat2;
 using FMatrix3	   = glm::mat3;
 using FMatrix4	   = glm::mat4;
-
-using Window	   = GLFWwindow*;

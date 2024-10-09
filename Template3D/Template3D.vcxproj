@@ -175,21 +175,59 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Core\pch.cpp">
+    <ClCompile Include="Core\Utilities\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Core\Utilities\handle.cpp" />
-    <ClCompile Include="Managers\Resource\resource_manager.cpp" />
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="Managers\Display\display_manager.cpp" />
+    <ClCompile Include="Managers\Render\OpenGL\Common\pipeline_gl.cpp" />
+    <ClCompile Include="Managers\Render\OpenGL\Common\shader_gl.cpp" />
+    <ClCompile Include="Managers\Render\OpenGL\opengl_api.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\buffer.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\command_buffer.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\debug_messenger.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\descriptor_pool.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\image.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\logical_device.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\physical_device.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\pipeline_vk.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\render_pass.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\shader_vk.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\swapchain.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\vulkan_api.cpp" />
+    <ClCompile Include="Managers\Resource\Common\color.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Core\pch.hpp" />
+    <ClInclude Include="Core\simulation.hpp" />
+    <ClInclude Include="Core\Utilities\pch.hpp" />
     <ClInclude Include="Core\Utilities\types.hpp" />
     <ClInclude Include="Managers\Display\Common\hint.hpp" />
+    <ClInclude Include="Managers\Display\Common\window_preset.hpp" />
+    <ClInclude Include="Managers\Render\Common\graphics_api_concept.hpp" />
+    <ClInclude Include="Managers\Render\Common\pipeline_type.hpp" />
+    <ClInclude Include="Managers\Render\OpenGL\Common\pipeline_gl.hpp" />
+    <ClInclude Include="Managers\Render\OpenGL\Common\shader_gl.hpp" />
+    <ClInclude Include="Managers\Render\OpenGL\Common\shader_set_gl.hpp" />
+    <ClInclude Include="Managers\Render\OpenGL\opengl_api.hpp" />
+    <ClInclude Include="Managers\Render\render_manager.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\buffer.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\command_buffer.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\debug_messenger.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\descriptor_pool.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\image.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\logical_device.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\physical_device.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\pipeline_vk.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\render_pass.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\shader_set_vk.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\shader_vk.hpp" />
+    <ClInclude Include="Managers\Render\Common\shader_type.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\swapchain.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\vulkan_api.hpp" />
     <ClInclude Include="Managers\Resource\Common\color.hpp" />
     <ClInclude Include="Core\Utilities\handle.hpp" />
     <ClInclude Include="Managers\Resource\Common\material.hpp" />
@@ -199,6 +237,10 @@
     <ClInclude Include="Managers\Resource\Common\vertex.hpp" />
     <ClInclude Include="Managers\Resource\resource_manager.hpp" />
     <ClInclude Include="Managers\Display\display_manager.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Core\simulation.inl" />
+    <None Include="Managers\Resource\resource_manager.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

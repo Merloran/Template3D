@@ -2,33 +2,35 @@
 
 enum class ETextureType : Int16
 {
-	None = 0,
+    None = 0,
 
-	Albedo,
-	Normal,
-	Roughness,
-	Metalness,
-	AmbientOcclusion,
-	Emission,
-	Height,
-	Opacity,
-	HDR,
+    Albedo,
+    Normal,
+    Roughness,
+    Metalness,
+    AmbientOcclusion,
+    Emission,
+    Height,
+    Opacity,
+    HDR,
 
-	RM,
-	RMAO,
+    RM,
+    RMAO,
 
-	Count,
+    Count,
 };
 
+template<typename API>
 struct Texture 
 {
-	IVector2 size;
-	String name;
-	UInt8* data; //TODO: change it to DynamicArray after changing image loading library
-	Int32 channels; //TODO: change it to UInt8 after changing image loading library
-	ETextureType type;
+    IVector2 size;
+    String name;
+    UInt8* data; //TODO: change it to DynamicArray after changing image loading library
+    Int32 channels; //TODO: change it to UInt8 after changing image loading library
+    ETextureType type;
+    Handle<typename API::Image> imageHandle;
 
-	Texture()
+    Texture()
         : size()
         , data(nullptr)
         , channels(0)

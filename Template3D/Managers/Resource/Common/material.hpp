@@ -2,28 +2,31 @@
 #include "texture.hpp"
 
 /** It's just set of textures */
+template<typename API>
 struct Material
 {
-	Array<Handle<Texture>, UInt64(ETextureType::Count)> textures;
-	Float32	indexOfRefraction;
-	String name;
+    String name;
+    Array<Handle<Texture<API>>, UInt64(ETextureType::Count)> textures;
+    Float32	indexOfRefraction;
+    Handle<typename API::ShaderSet> shaderSetHandle;
 
-	Material()
+    Material()
         : indexOfRefraction(0.0f)
+        , shaderSetHandle(Handle<typename API::ShaderSet>::NONE)
     {
-        for (Handle<Texture>& texture : textures)
+        for (Handle<Texture<API>>& texture : textures)
         {
-            texture = Handle<Texture>::NONE;
+            texture = Handle<Texture<API>>::NONE;
         }
     }
 
-    Handle<Texture>& operator[](ETextureType type)
+    Handle<Texture<API>>& operator[](ETextureType type)
     {
-		return textures[UInt64(type)];
-	}
+        return textures[UInt64(type)];
+    }
 
-	Handle<Texture> operator[](ETextureType type) const
+    Handle<Texture<API>> operator[](ETextureType type) const
     {
-		return textures[UInt64(type)];
-	}
+        return textures[UInt64(type)];
+    }
 };

@@ -1,24 +1,30 @@
-﻿#include "Managers/Resource/resource_manager.hpp"
+﻿#include "simulation.hpp"
+#include "Managers/Resource/resource_manager.hpp"
 #include "Managers/Display/display_manager.hpp"
+#include "Managers/Display/Common/glfw_api.hpp"
+#include "Managers/Render/OpenGL/opengl_api.hpp"
 
 
 Int32 main()
 {
-	ResourceManager& resourceManager = ResourceManager::get();
-	DisplayManager& displayManager = DisplayManager::get();
+    Simulation<OpenGL> simulation;
+    // simulation.startup();
+    simulation.displayManager.startup();
+    DisplayManager& displayManager = simulation.displayManager;
+    simulation.resourceManager.startup();
 
-	displayManager.startup();
-	displayManager.set_current_window(displayManager.create_preset_window("Template3D", 
+    displayManager.set_current_window(displayManager.create_preset_window("Template3D", 
                                                                                 { 1024, 768 }, 
                                                                                 EWindowPreset::OpenGL));
-	resourceManager.startup();
+    
+    simulation.renderManager.startup(simulation);
+    while (!displayManager.should_window_close())
+    {
+        displayManager.poll_events();
+        simulation.renderManager.draw_model(simulation, simulation.resourceManager.get_default_model());
+        displayManager.swap_buffers();
+    }
 
-	while (!displayManager.should_window_close())
-	{
-		displayManager.poll_events();
-	}
-
-	resourceManager.shutdown();
-	displayManager.shutdown();
-	return 0;
+    simulation.shutdown();
+    return 0;
 }
