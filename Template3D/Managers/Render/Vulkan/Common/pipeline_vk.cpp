@@ -4,6 +4,7 @@
 #include "descriptor_pool.hpp"
 #include "render_pass.hpp"
 #include "shader_vk.hpp"
+#include "../Managers/Resource/Common/vertex.hpp"
 
 #include <magic_enum.hpp>
 
@@ -53,16 +54,16 @@ Void PipelineVK::create_graphics_pipeline(const DescriptorPool& descriptorPool, 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     if (renderPass.is_depth_test_enabled())
     {
-	    depthStencil.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	    depthStencil.depthTestEnable       = VK_TRUE;
-	    depthStencil.depthWriteEnable      = VK_TRUE;
-	    depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
-	    depthStencil.depthBoundsTestEnable = VK_FALSE;
-	    depthStencil.minDepthBounds        = 0.0f; // Optional
-	    depthStencil.maxDepthBounds        = 1.0f; // Optional
-	    depthStencil.stencilTestEnable     = VK_FALSE;
-	    depthStencil.front                 = {}; // Optional
-	    depthStencil.back                  = {}; // Optional
+        depthStencil.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthStencil.depthTestEnable       = VK_TRUE;
+        depthStencil.depthWriteEnable      = VK_TRUE;
+        depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
+        depthStencil.depthBoundsTestEnable = VK_FALSE;
+        depthStencil.minDepthBounds        = 0.0f; // Optional
+        depthStencil.maxDepthBounds        = 1.0f; // Optional
+        depthStencil.stencilTestEnable     = VK_FALSE;
+        depthStencil.front                 = {}; // Optional
+        depthStencil.back                  = {}; // Optional
     }
 
     VkPipelineRasterizationStateCreateInfo rasterizer{};
@@ -83,11 +84,11 @@ Void PipelineVK::create_graphics_pipeline(const DescriptorPool& descriptorPool, 
     multisampling.rasterizationSamples = renderPass.get_samples();
     if (renderPass.is_multi_sampling_enabled())
     {
-	    multisampling.sampleShadingEnable   = VK_TRUE; // enable sample shading in the pipeline
-	    multisampling.minSampleShading      = 0.2f; // min fraction for sample shading; closer to one is smooth
-	    multisampling.pSampleMask           = nullptr; // Optional
-	    multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
-	    multisampling.alphaToOneEnable      = VK_FALSE; // Optional
+        multisampling.sampleShadingEnable   = VK_TRUE; // enable sample shading in the pipeline
+        multisampling.minSampleShading      = 0.2f; // min fraction for sample shading; closer to one is smooth
+        multisampling.pSampleMask           = nullptr; // Optional
+        multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+        multisampling.alphaToOneEnable      = VK_FALSE; // Optional
     } else {
         multisampling.sampleShadingEnable   = VK_FALSE; // enable sample shading in the pipeline
     }
@@ -246,32 +247,32 @@ Bool PipelineVK::create_shader_stage_info(const ShaderVK& ShaderVK, VkPipelineSh
     info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     switch (ShaderVK.get_type())
     {
-	    case EShaderType::Vertex: 
+        case EShaderType::Vertex: 
         {
             info.stage = VK_SHADER_STAGE_VERTEX_BIT;
             break;
         }
-	    case EShaderType::Geometry:
+        case EShaderType::Geometry:
         {
             info.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
             break;
         }
-	    case EShaderType::Fragment:
+        case EShaderType::Fragment:
         {
             info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
             break;
         }
-	    case EShaderType::Compute:
+        case EShaderType::Compute:
         {
             info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
             break;
         }
-	    default:
-	    {
+        default:
+        {
             SPDLOG_ERROR("Not supported ShaderVK type {} in ShaderVK {}", 
-						 magic_enum::enum_name(ShaderVK.get_type()), ShaderVK.get_name());
+                         magic_enum::enum_name(ShaderVK.get_type()), ShaderVK.get_name());
             return false;
-	    }
+        }
     }
     info.module = ShaderVK.get_module();
     info.pName  = ShaderVK.get_function_name().c_str();
@@ -280,42 +281,31 @@ Bool PipelineVK::create_shader_stage_info(const ShaderVK& ShaderVK, VkPipelineSh
 
 Void PipelineVK::get_mesh_binding_descriptions(DynamicArray<VkVertexInputBindingDescription>& descriptions)
 {
-    descriptions.reserve(3);
     VkVertexInputBindingDescription& positionsBinding = descriptions.emplace_back();
-    positionsBinding.binding = UInt32(descriptions.size()) - 1U;
-    positionsBinding.stride = sizeof(FVector3);
+    positionsBinding.binding = 0;
+    positionsBinding.stride = sizeof(Vertex);
     positionsBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    VkVertexInputBindingDescription& normalsBinding = descriptions.emplace_back();
-    normalsBinding.binding = UInt32(descriptions.size()) - 1U;
-    normalsBinding.stride = sizeof(FVector3);
-    normalsBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    VkVertexInputBindingDescription& uvsBinding = descriptions.emplace_back();
-    uvsBinding.binding = UInt32(descriptions.size()) - 1U;
-    uvsBinding.stride = sizeof(FVector2);
-    uvsBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 }
 
 Void PipelineVK::get_mesh_attribute_descriptions(DynamicArray<VkVertexInputAttributeDescription>& descriptions)
 {
     VkVertexInputAttributeDescription& positionsAttribute = descriptions.emplace_back();
-    positionsAttribute.binding = UInt32(descriptions.size()) - 1U;
-    positionsAttribute.location = UInt32(descriptions.size()) - 1U;
+    positionsAttribute.binding = 0;
+    positionsAttribute.location = 0;
     positionsAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-    positionsAttribute.offset = 0;
+    positionsAttribute.offset = offsetof(Vertex, position);
 
     VkVertexInputAttributeDescription& normalsAttribute = descriptions.emplace_back();
-    normalsAttribute.binding = UInt32(descriptions.size()) - 1U;
-    normalsAttribute.location = UInt32(descriptions.size()) - 1U;
+    normalsAttribute.binding = 0;
+    normalsAttribute.location = 1;
     normalsAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-    normalsAttribute.offset = 0;
+    normalsAttribute.offset = offsetof(Vertex, normal);
 
     VkVertexInputAttributeDescription& uvsAttribute = descriptions.emplace_back();
-    uvsAttribute.binding = UInt32(descriptions.size()) - 1U;
-    uvsAttribute.location = UInt32(descriptions.size()) - 1U;
+    uvsAttribute.binding = 0;
+    uvsAttribute.location = 2;
     uvsAttribute.format = VK_FORMAT_R32G32_SFLOAT;
-    uvsAttribute.offset = 0;
+    uvsAttribute.offset = offsetof(Vertex, uv);
 }
 
 Void PipelineVK::clear(const LogicalDevice& logicalDevice, const VkAllocationCallbacks* allocator)

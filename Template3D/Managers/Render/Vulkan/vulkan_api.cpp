@@ -4,16 +4,16 @@
 #include "../../Resource/Common/texture.hpp"
 #include "../../Resource/Common/mesh.hpp"
 #include "../../Resource/Common/model.hpp"
-#include "Common/command_buffer.hpp"
-#include "Common/shader_vk.hpp"
-#include "Common/shader_set_vk.hpp"
 
 #include <filesystem>
 #include <GLFW/glfw3.h>
 #include <magic_enum.hpp>
+#include <glslang/Public/ShaderLang.h>
+
+#include "simulation.hpp"
 
 
-Void Vulkan::startup()
+Void Vulkan::startup(Simulation<Vulkan>& simulation)
 {
     isFrameEven = false;
     create_vulkan_instance();
@@ -21,268 +21,239 @@ Void Vulkan::startup()
     {
         debugMessenger.create(instance, nullptr);
     }
-    create_surface();
+    create_surface(simulation);
     physicalDevice.select_physical_device(instance, surface);
     logicalDevice.create(physicalDevice, debugMessenger, nullptr);
 
-    uniformBufferHandle = create_dynamic_buffer<UniformBufferObject>(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    create_dynamic_buffer<UniformBufferObject>(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "DefaultUniformBuffer");
 
-    create_graphics_descriptors();
     graphicsPool = create_command_pool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     create_command_buffers(get_command_pool(graphicsPool),
                            VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                           { "Graphics" });
+                           { "DefaultCommandBuffer" });
 
-    inFlightFence = create_fence("rasterizeInFlight");
-    renderFinished = create_semaphore("rasterizeRenderFinished");
+    inFlightFence = create_fence("DefaultFence", VK_FENCE_CREATE_SIGNALED_BIT);
+    imageAvailable = create_semaphore("DefaultImageAvailable");
+    renderFinished = create_semaphore("DefaultSemaphore");
 
-    //Shaders should be created after logical device
-    Handle<Shader> vert = load_shader(SHADERS_PATH + "Shader.vert", EShaderType::Vertex);
-    Handle<Shader> frag = load_shader(SHADERS_PATH + "Shader.frag", EShaderType::Fragment);
-    DynamicArray<Shader> shaders;
-    shaders.push_back(get_shader(vert));
-    shaders.push_back(get_shader(frag));
-    swapchain.create(logicalDevice, physicalDevice, surface, nullptr);
-    rasterizePass = create_render_pass(physicalDevice.get_max_samples());
-
-    graphicsPipeline.create_graphics_pipeline(descriptorPool,
-                                              get_render_pass(rasterizePass),
-                                              shaders,
-                                              logicalDevice,
-                                              nullptr);
-}
-
-VkSurfaceKHR Vulkan::get_surface() const
-{
-    return surface;
-}
-
-const PhysicalDevice& Vulkan::get_physical_device() const
-{
-    return physicalDevice;
-}
-
-const LogicalDevice& Vulkan::get_logical_device() const
-{
-    return logicalDevice;
-}
-
-Swapchain& Vulkan::get_swapchain()
-{
-    return swapchain;
-}
-
-DescriptorPool& Vulkan::get_pool()
-{
-    return descriptorPool;
-}
-
-const Handle<Vulkan::Shader>& Vulkan::get_shader_handle(const String& name) const
-{
-    const auto& iterator = shadersNameMap.find(name);
-    if (iterator == shadersNameMap.end())
+    if (!glslang::InitializeProcess())
     {
-        SPDLOG_WARN("Shader handle {} not found, returned None.", name);
-        return Handle<Shader>::NONE;
+        SPDLOG_ERROR("Failed to initialize glslang.");
+        return;
+    }
+    // Create default pipeline
+    {
+        String vertCode = "#version 460                                                         \n"
+                          "layout (location = 0) in vec3 position;                              \n"
+                          "layout (location = 1) in vec3 normal;                                \n"
+                          "layout (location = 2) in vec2 uv;                                    \n"
+                          "                                                                     \n"
+                          "                                                                     \n"
+                          "layout(binding = 0) uniform UniformBufferObject                      \n"
+                          "{                                                                    \n"
+                          "    mat4 viewProjection;                                             \n"
+                          "} ubo;                                                               \n"
+                          "                                                                     \n"
+                          "                                                                     \n"
+                          "layout( push_constant ) uniform PushConstants                        \n"
+                          "{                                                                    \n"
+                          "    mat4 model;                                                      \n"
+                          "} constants;                                                         \n"
+                          "                                                                     \n"
+                          "layout (location = 0) out vec3 worldPosition;                        \n"
+                          "layout (location = 1) out vec3 worldNormal;                          \n"
+                          "layout (location = 2) out vec2 uvFragment;                           \n"
+                          "                                                                     \n"
+                          "void main()                                                          \n"
+                          "{                                                                    \n"
+                          "    worldPosition = vec3(constants.model * vec4(position, 1.0f));    \n"
+                          "    worldNormal = mat3(transpose(inverse(constants.model))) * normal;\n"
+                          "    uvFragment = uv;                                                 \n"
+                          "	                                                                    \n"
+                          "	   gl_Position = ubo.viewProjection * vec4(worldPosition, 1.0f);    \n"
+                          "}                                                                    \n";
+
+        String fragCode = "#version 460                                                       \n"
+                          "#extension GL_EXT_nonuniform_qualifier : require                   \n"
+                          "                                                                   \n"
+                          "layout (location = 0) in vec3 worldPosition;                       \n"
+                          "layout (location = 1) in vec3 worldNormal;                         \n"
+                          "layout (location = 2) in vec2 uvFragment;                          \n"
+                          "                                                                   \n"
+                          "layout(set = 1, binding = 0) uniform sampler2D Albedo;             \n"
+                          "                                                                   \n"
+                          "layout (location = 0) out vec4 color;                              \n"
+                          "                                                                   \n"
+                          "void main()                                                        \n"
+                          "{                                                                  \n"
+                          "    const vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);                \n"
+                          "    vec3 lightPosition = vec3(10.0f, 50.0f, 10.0f);                \n"
+                          "    vec4 objectColor = texture(Albedo, uvFragment);                \n"
+                          "    if (objectColor.w < 0.1f)                                      \n"
+                          "    {                                                              \n"
+                          "        discard;                                                   \n"
+                          "    }                                                              \n"
+                          "                                                                   \n"
+                          "    // ambient                                                     \n"
+                          "    float ambientStrength = 0.5f;                                  \n"
+                          "    vec3 ambient = ambientStrength * lightColor;                   \n"
+                          "    // diffuse                                                     \n"
+                          "    vec3 normal = normalize(worldNormal);                          \n"
+                          "    vec3 lightDirection = normalize(lightPosition - worldPosition);\n"
+                          "    float diff = max(dot(normal, lightDirection), 0.0f);           \n"
+                          "    vec3 diffuse = diff * lightColor;                              \n"
+                          "                                                                   \n"
+                          "    color = vec4((ambient + diffuse) * objectColor.xyz, 1.0f);     \n"
+                          "}                                                                  \n";
+
+
+        ShaderSet defaultSet;
+        //Shaders should be created after logical device
+        defaultSet.shaderHandles.push_back(create_shader("Default", vertCode, EShaderType::Vertex));
+        defaultSet.shaderHandles.push_back(create_shader("Default", fragCode, EShaderType::Fragment));
+
+        swapchain.create(logicalDevice,
+                         physicalDevice,
+                         surface, 
+                         simulation.displayManager.get_framebuffer_size(), 
+                         nullptr);
+
+        defaultSet.renderPassHandle = create_render_pass(physicalDevice.get_max_samples());
+        defaultSet.descriptorPoolHandle = create_descriptor_pool();
+        create_default_descriptors();
+
+        defaultSet.pipelineHandle = create_pipeline(defaultSet);
+        simulation.resourceManager.get_default_material().shaderSetHandle = create_shader_set(defaultSet);
+        create_model_render_data(simulation, simulation.resourceManager.get_default_model());
+        setup_default_descriptors(simulation);
+    }
+}
+
+Void Vulkan::draw_model(Simulation<Vulkan>& simulation, const Model<Vulkan>& model)
+{
+    const VkFence renderFence = get_fence(inFlightFence);
+    logicalDevice.wait_for_fence(renderFence, true);
+    logicalDevice.reset_fence(renderFence);
+
+    CommandBuffer commandBuffer = get_command_buffer("DefaultCommandBuffer");
+    const UVector2& extent = swapchain.get_extent();
+    VkSemaphore imageSemaphore = get_semaphore(imageAvailable);
+    VkResult result = logicalDevice.acquire_next_image(swapchain, imageSemaphore);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        recreate_swapchain(simulation);
+        return;
     }
 
-    return iterator->second;
-}
-
-Vulkan::Shader& Vulkan::get_shader(const String& name)
-{
-    const auto& iterator = shadersNameMap.find(name);
-    if (iterator == shadersNameMap.end())
     {
-        SPDLOG_WARN("Shader {} not found, returned default.", name);
-        return shaders[0];
+        UniformBufferObject ubo{};
+        const FMatrix4 projectionMatrix = glm::perspective(glm::radians(70.0f),
+                                                           simulation.displayManager.get_aspect_ratio(),
+                                                           0.001f,
+                                                           5000.0f);
+        const FMatrix4 viewMatrix = glm::lookAt(FVector3{ 0.0f, 0.0f, -10.0f },
+                                                FVector3{ 0.0f, 0.0f, 0.0f },
+                                                FVector3{ 0.0f, 1.0f, 0.0f });
+        ubo.viewProjection = projectionMatrix * viewMatrix;
+
+        get_buffer("DefaultUniformBuffer").update_dynamic_buffer(ubo);
     }
 
-    return shaders[iterator->second.id];
-}
-
-Vulkan::Shader& Vulkan::get_shader(const Handle<Shader> handle)
-{
-    if (handle.id >= shaders.size())
+    ResourceManager<Vulkan>& resourceManager = simulation.resourceManager;
+    for (UInt64 i = 0; i < model.meshes.size(); ++i)
     {
-        SPDLOG_WARN("Shader {} not found, returned default.", handle.id);
-        return shaders[0];
-    }
-    return shaders[handle.id];
-}
+        const Mesh<Vulkan>& mesh = resourceManager.get_mesh(model.meshes[i]);
+        const Material<Vulkan>& material = resourceManager.get_material(model.materials[i]);
+        ShaderSet& shaderSet = get_shader_set(material.shaderSetHandle);
+        Pipeline& pipeline = get_pipeline(shaderSet.pipelineHandle);
+        RenderPass& renderPass = get_render_pass(shaderSet.renderPassHandle);
+        DescriptorPool& descriptorPool = get_descriptor_pool(shaderSet.descriptorPoolHandle);
 
-Vulkan::Pipeline& Vulkan::get_pipeline(const Handle<Pipeline> handle)
-{
-    if (handle.id >= buffers.size())
-    {
-        SPDLOG_ERROR("Pipeline {} not found, returned default.", handle.id);
-        return pipelines[0];
-    }
-    return pipelines[handle.id];
-}
+        commandBuffer.reset(0);
+        commandBuffer.begin();
+        commandBuffer.begin_render_pass(renderPass,
+                                        swapchain,
+                                        swapchain.get_image_index(),
+                                        VK_SUBPASS_CONTENTS_INLINE);
+        commandBuffer.bind_pipeline(pipeline);
 
-Vulkan::ShaderSet& Vulkan::get_shader_set(const Handle<ShaderSet> handle)
-{
-    if (handle.id >= buffers.size())
-    {
-        SPDLOG_ERROR("Shader set {} not found, returned default.", handle.id);
-        return shaderSets[0];
-    }
-    return shaderSets[handle.id];
-}
+        commandBuffer.set_viewport(0, { 0.0f, 0.0f }, extent, { 0.0f, 1.0f });
+        commandBuffer.set_scissor(0, { 0, 0 }, extent);
 
-const Handle<CommandBuffer>& Vulkan::get_command_buffer_handle(const String& name) const
-{
-    const auto& iterator = commandBuffersNameMap.find(name);
-    if (iterator == commandBuffersNameMap.end())
-    {
-        SPDLOG_ERROR("Command buffer handle {} not found, returned None.", name);
-        return Handle<CommandBuffer>::NONE;
-    }
+        DescriptorResourceInfo textureResource;
+        VkDescriptorImageInfo& textureInfo = textureResource.imageInfos.emplace_back();
+        Texture<Vulkan> albedoTexture = resourceManager.get_texture(material[ETextureType::Albedo]);
+        const Image& albedo = get_image(albedoTexture.imageHandle);
+        textureInfo.imageLayout = albedo.get_current_layout();
+        textureInfo.imageView = albedo.get_view();
+        textureInfo.sampler = albedo.get_sampler();
 
-    return iterator->second;
-}
+        descriptorPool.update_set(logicalDevice, 
+                                  textureResource,
+                                  "Texture", 
+                                  0, 
+                                  0);
 
-CommandBuffer& Vulkan::get_command_buffer(const String& name)
-{
-    const auto& iterator = commandBuffersNameMap.find(name);
-    if (iterator == commandBuffersNameMap.end())
-    {
-        SPDLOG_ERROR("Command buffer {} not found, returned default.", name);
-        return commandBuffers[0];
-    }
+        const DescriptorSetData& uniformSet = descriptorPool.get_set_data("Uniforms");
+        commandBuffer.bind_descriptor_set(pipeline, uniformSet.set, uniformSet.setNumber);
 
-    return commandBuffers[iterator->second.id];
-}
+        const DescriptorSetData& textureSet = descriptorPool.get_set_data("Texture");
+        commandBuffer.bind_descriptor_set(pipeline, textureSet.set, textureSet.setNumber);
+    
 
-CommandBuffer& Vulkan::get_command_buffer(const Handle<CommandBuffer> handle)
-{
-    if (handle.id >= commandBuffers.size())
-    {
-        SPDLOG_ERROR("Command buffer {} not found, returned default.", handle.id);
-        return commandBuffers[0];
-    }
-    return commandBuffers[handle.id];
-}
+        const VkBuffer vertexesBuffer = get_buffer(mesh.vertexesHandle).get_buffer();
+        const VkBuffer indexesBuffer = get_buffer(mesh.indexesHandle).get_buffer();
+        
+        commandBuffer.bind_vertex_buffers<1>(0, { vertexesBuffer }, { 0 });
+        commandBuffer.bind_index_buffer(indexesBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-const Handle<VkSemaphore>& Vulkan::get_semaphore_handle(const String& name) const
-{
-    const auto& iterator = semaphoresNameMap.find(name);
-    if (iterator == semaphoresNameMap.end())
-    {
-        SPDLOG_ERROR("Semaphore handle {} not found, returned None.", name);
-        return Handle<VkSemaphore>::NONE;
-    }
+        VertexConstants vertexConstants{};
+        static Float32 rot = 0.0f;
+        vertexConstants.model = glm::rotate(FMatrix4(1.0f), 
+                                            glm::radians(rot), 
+                                            {0.0f, 1.0f, 0.0f});
+        rot += 0.01f;
 
-    return iterator->second;
-}
+        commandBuffer.set_constants(pipeline,
+                                    VK_SHADER_STAGE_VERTEX_BIT,
+                                    0,
+                                    sizeof(vertexConstants),
+                                    &vertexConstants);
 
-VkSemaphore Vulkan::get_semaphore(const String& name)
-{
-    const auto& iterator = semaphoresNameMap.find(name);
-    if (iterator == semaphoresNameMap.end())
-    {
-        SPDLOG_ERROR("Semaphore {} not found, returned default.", name);
-        return semaphores[0];
+
+        commandBuffer.draw_indexed(UInt32(mesh.indexes.size()),
+                                   1,
+                                   0,
+                                   0,
+                                   0);
+    
+
+        commandBuffer.end_render_pass();
+        commandBuffer.end();
+
+        const VkSemaphore renderSemaphore = get_semaphore(renderFinished);
+        logicalDevice.submit_graphics_queue(imageSemaphore,
+                                            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                            commandBuffer.get_buffer(),
+                                            renderSemaphore,
+                                            renderFence);
+
+        const VkResult result = logicalDevice.submit_present_queue(renderSemaphore, swapchain);
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+        {
+            recreate_swapchain(simulation);
+        }
     }
 
-    return semaphores[iterator->second.id];
+    isFrameEven = !isFrameEven;
 }
 
-VkSemaphore Vulkan::get_semaphore(const Handle<VkSemaphore> handle)
-{
-    if (handle.id >= semaphores.size())
-    {
-        SPDLOG_ERROR("Semaphore {} not found, returned default.", handle.id);
-        return semaphores[0];
-    }
-    return semaphores[handle.id];
-}
-
-const Handle<VkFence>& Vulkan::get_fence_handle(const String& name) const
-{
-    const auto& iterator = fencesNameMap.find(name);
-    if (iterator == fencesNameMap.end())
-    {
-        SPDLOG_ERROR("Fence handle {} not found, returned None.", name);
-        return Handle<VkFence>::NONE;
-    }
-
-    return iterator->second;
-}
-
-VkFence Vulkan::get_fence(const String& name)
-{
-    const auto& iterator = fencesNameMap.find(name);
-    if (iterator == fencesNameMap.end())
-    {
-        SPDLOG_ERROR("Fence {} not found, returned default.", name);
-        return fences[0];
-    }
-
-    return fences[iterator->second.id];
-}
-
-VkFence Vulkan::get_fence(const Handle<VkFence> handle)
-{
-    if (handle.id >= fences.size())
-    {
-        SPDLOG_ERROR("Fence {} not found, returned default.", handle.id);
-        return fences[0];
-    }
-    return fences[handle.id];
-}
-
-Vulkan::Image& Vulkan::get_image(const Handle<Image> handle)
-{
-    if (handle.id >= images.size())
-    {
-        SPDLOG_ERROR("Image {} not found, returned default.", handle.id);
-        return images[0];
-    }
-    return images[handle.id];
-}
-
-Vulkan::Buffer& Vulkan::get_buffer(const Handle<Buffer> handle)
-{
-    if (handle.id >= buffers.size())
-    {
-        SPDLOG_ERROR("Buffer {} not found, returned default.", handle.id);
-        return buffers[0];
-    }
-    return buffers[handle.id];
-}
-
-VkCommandPool Vulkan::get_command_pool(const Handle<VkCommandPool> handle)
-{
-    if (handle.id >= commandPools.size())
-    {
-        SPDLOG_ERROR("Command pool {} not found, returned default.", handle.id);
-        return commandPools[0];
-    }
-    return commandPools[handle.id];
-}
-
-RenderPass& Vulkan::get_render_pass(const Handle<RenderPass> handle)
-{
-    if (handle.id >= renderPasses.size())
-    {
-        SPDLOG_ERROR("Render pass {} not found, returned default.", handle.id);
-        return renderPasses[0];
-    }
-    return renderPasses[handle.id];
-}
-
-
-
-Handle<Vulkan::Shader> Vulkan::load_shader(const String& filePath, const EShaderType shaderType, const String& functionName)
+Handle<Vulkan::Shader> Vulkan::create_shader(const String& filePath, const EShaderType shaderType, const String& functionName)
 {
     const UInt64 shaderId = shaders.size();
     Shader& shader = shaders.emplace_back();
 
-    const std::filesystem::path path(filePath);
-    const String destinationPath = (SHADERS_PATH / path.filename()).string() + COMPILED_SHADER_EXTENSION;
-    shader.create(filePath, destinationPath, GLSL_COMPILER_PATH, functionName, shaderType, logicalDevice, nullptr);
+    shader.create(filePath, functionName, shaderType, logicalDevice, nullptr);
 
     const Handle<Shader> handle{ shaderId };
     auto iterator = shadersNameMap.find(shader.get_name());
@@ -298,11 +269,64 @@ Handle<Vulkan::Shader> Vulkan::load_shader(const String& filePath, const EShader
     return handle;
 }
 
-Void Vulkan::generate_mesh_buffers(DynamicArray<Mesh<Vulkan>>& meshes)
+Handle<Vulkan::Shader> Vulkan::create_shader(const String& shaderName, const String& shaderCode, EShaderType shaderType, const String& functionName)
 {
-    for (Mesh<Vulkan>& mesh : meshes)
+    const UInt64 shaderId = shaders.size();
+    Shader& shader = shaders.emplace_back();
+
+    shader.create(shaderName, shaderCode, functionName, shaderType, logicalDevice, nullptr);
+
+    const Handle<Shader> handle{ shaderId };
+    auto iterator = shadersNameMap.find(shader.get_name());
+    if (iterator != shadersNameMap.end())
     {
-        create_mesh_buffers(mesh);
+        SPDLOG_WARN("Shader {} already exists.", shader.get_name());
+        shader.clear(logicalDevice, nullptr);
+        return iterator->second;
+    }
+
+    shadersNameMap[shader.get_name()] = handle;
+
+    return handle;
+}
+
+Handle<Vulkan::Pipeline> Vulkan::create_pipeline(const ShaderSet& shaderSet)
+{
+    Handle<Pipeline> handle = { pipelines.size() };
+    Pipeline& pipeline = pipelines.emplace_back();
+
+    const DescriptorPool& descriptorPool = get_descriptor_pool(shaderSet.descriptorPoolHandle);
+    const RenderPass& renderPass = get_render_pass(shaderSet.renderPassHandle);
+    DynamicArray<Shader> pipelineShaders;
+    pipelineShaders.reserve(shaderSet.shaderHandles.size());
+    for (const Handle<ShaderVK> shaderHandle : shaderSet.shaderHandles)
+    {
+        pipelineShaders.push_back(get_shader(shaderHandle));
+    }
+
+    pipeline.create_graphics_pipeline(descriptorPool,
+                                      renderPass,
+                                      pipelineShaders,
+                                      logicalDevice,
+                                      nullptr);
+
+    return handle;
+}
+
+Handle<Vulkan::ShaderSet> Vulkan::create_shader_set(const ShaderSet& shaderSet)
+{
+    const UInt64 shaderSetId = shaderSets.size();
+    shaderSets.push_back(shaderSet);
+    const Handle<ShaderSet> handle{ shaderSetId };
+    return handle;
+}
+
+Void Vulkan::create_model_render_data(Simulation<Vulkan>& simulation, Model<Vulkan>& model)
+{
+    for (UInt64 i = 0; i < model.meshes.size(); ++i)
+    {
+        create_mesh_buffers(simulation.resourceManager.get_mesh(model.meshes[i]));
+        create_material_images(simulation, simulation.resourceManager.get_material(model.materials[i]));
     }
 }
 
@@ -312,12 +336,16 @@ Void Vulkan::create_mesh_buffers(Mesh<Vulkan>& mesh)
     mesh.indexesHandle  = create_static_buffer(mesh.indexes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 }
 
-Void Vulkan::generate_texture_images(DynamicArray<Texture<Vulkan>>& textures)
+Void Vulkan::create_material_images(Simulation<Vulkan>& simulation, Material<Vulkan>& material)
 {
-    for (Texture<Vulkan>& texture : textures)
+    for (Handle<Texture<Vulkan>>& textureHandle : material.textures)
     {
-        UInt32 mipLevel = UInt32(std::floor(std::log2(std::max(texture.size.x, texture.size.y)))) + 1;
-        create_texture_image(texture, mipLevel);
+        if (textureHandle != Handle<Texture<Vulkan>>::NONE)
+        {
+            Texture<Vulkan>& texture = simulation.resourceManager.get_texture(textureHandle);
+            UInt32 mipLevels = UInt32(std::floor(std::log2(std::max(texture.size.x, texture.size.y)))) + 1;
+            create_texture_image(texture, mipLevels);
+        }
     }
 }
 
@@ -593,6 +621,13 @@ Handle<RenderPass> Vulkan::create_render_pass(VkSampleCountFlagBits samples, Boo
     return handle;
 }
 
+Handle<DescriptorPool> Vulkan::create_descriptor_pool()
+{
+    Handle<DescriptorPool> handle = { descriptorPools.size() };
+    descriptorPools.emplace_back();
+    return handle;
+}
+
 Handle<VkCommandPool> Vulkan::create_command_pool(VkCommandPoolCreateFlagBits flags)
 {
     Handle<VkCommandPool> handle = { commandPools.size() };
@@ -638,7 +673,9 @@ Void Vulkan::create_command_buffers(VkCommandPool pool, VkCommandBufferLevel lev
     allocInfo.level = level;
     allocInfo.commandBufferCount = UInt32(buffers.size());
 
-    const VkResult result = vkAllocateCommandBuffers(logicalDevice.get_device(), &allocInfo, buffers.data());
+    const VkResult result = vkAllocateCommandBuffers(logicalDevice.get_device(), 
+                                                     &allocInfo, 
+                                                     buffers.data());
     if (result != VK_SUCCESS)
     {
         SPDLOG_ERROR("Creating command buffers failed with: {}", magic_enum::enum_name(result));
@@ -702,41 +739,261 @@ Handle<VkFence> Vulkan::create_fence(const String& name, VkFenceCreateFlags flag
     return handle;
 }
 
-Void Vulkan::create_graphics_descriptors()
+
+
+VkSurfaceKHR Vulkan::get_surface() const
 {
-    // descriptorPool.add_binding("TexturesDataLayout",
-    //                            1,
-    //                            0,
-    //                            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-    //                            UInt32(resourceManager.get_textures().size()),
-    //                            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-    //                            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-    //                            VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
-    //                            VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT);
+    return surface;
+}
 
-    descriptorPool.add_binding("CameraDataLayout",
-                               0,
-                               0,
-                               VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                               1,
-                               VK_SHADER_STAGE_VERTEX_BIT,
-                               VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-                               VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
-                               VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT);
+const PhysicalDevice& Vulkan::get_physical_device() const
+{
+    return physicalDevice;
+}
 
+const LogicalDevice& Vulkan::get_logical_device() const
+{
+    return logicalDevice;
+}
 
-    descriptorPool.create_layouts(logicalDevice, nullptr);
+Swapchain& Vulkan::get_swapchain()
+{
+    return swapchain;
+}
 
-    DynamicArray<VkPushConstantRange> pushConstants;
-    VkPushConstantRange& vertexConstant = pushConstants.emplace_back();
-    vertexConstant.size = sizeof(VertexConstants);
-    vertexConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+const Handle<Vulkan::Shader>& Vulkan::get_shader_handle(const String& name) const
+{
+    const auto& iterator = shadersNameMap.find(name);
+    if (iterator == shadersNameMap.end())
+    {
+        SPDLOG_WARN("Shader handle {} not found, returned None.", name);
+        return Handle<Shader>::NONE;
+    }
 
-    VkPushConstantRange& fragmentConstant = pushConstants.emplace_back();
-    fragmentConstant.size = sizeof(FragmentConstants);
-    fragmentConstant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    return iterator->second;
+}
 
-    descriptorPool.set_push_constants(pushConstants);
+Vulkan::Shader& Vulkan::get_shader(const String& name)
+{
+    const auto& iterator = shadersNameMap.find(name);
+    if (iterator == shadersNameMap.end())
+    {
+        SPDLOG_WARN("Shader {} not found, returned default.", name);
+        return shaders[0];
+    }
+
+    return shaders[iterator->second.id];
+}
+
+Vulkan::Shader& Vulkan::get_shader(const Handle<Shader> handle)
+{
+    if (handle.id >= shaders.size())
+    {
+        SPDLOG_WARN("Shader {} not found, returned default.", handle.id);
+        return shaders[0];
+    }
+    return shaders[handle.id];
+}
+
+Vulkan::Pipeline& Vulkan::get_pipeline(const Handle<Pipeline> handle)
+{
+    if (handle.id >= buffers.size())
+    {
+        SPDLOG_ERROR("Pipeline {} not found, returned default.", handle.id);
+        return pipelines[0];
+    }
+    return pipelines[handle.id];
+}
+
+Vulkan::ShaderSet& Vulkan::get_shader_set(const Handle<ShaderSet> handle)
+{
+    if (handle.id >= buffers.size())
+    {
+        SPDLOG_ERROR("Shader set {} not found, returned default.", handle.id);
+        return shaderSets[0];
+    }
+    return shaderSets[handle.id];
+}
+
+const Handle<CommandBuffer>& Vulkan::get_command_buffer_handle(const String& name) const
+{
+    const auto& iterator = commandBuffersNameMap.find(name);
+    if (iterator == commandBuffersNameMap.end())
+    {
+        SPDLOG_ERROR("Command buffer handle {} not found, returned None.", name);
+        return Handle<CommandBuffer>::NONE;
+    }
+
+    return iterator->second;
+}
+
+CommandBuffer& Vulkan::get_command_buffer(const String& name)
+{
+    const auto& iterator = commandBuffersNameMap.find(name);
+    if (iterator == commandBuffersNameMap.end())
+    {
+        SPDLOG_ERROR("Command buffer {} not found, returned default.", name);
+        return commandBuffers[0];
+    }
+
+    return commandBuffers[iterator->second.id];
+}
+
+CommandBuffer& Vulkan::get_command_buffer(const Handle<CommandBuffer> handle)
+{
+    if (handle.id >= commandBuffers.size())
+    {
+        SPDLOG_ERROR("Command buffer {} not found, returned default.", handle.id);
+        return commandBuffers[0];
+    }
+    return commandBuffers[handle.id];
+}
+
+const Handle<VkSemaphore>& Vulkan::get_semaphore_handle(const String& name) const
+{
+    const auto& iterator = semaphoresNameMap.find(name);
+    if (iterator == semaphoresNameMap.end())
+    {
+        SPDLOG_ERROR("Semaphore handle {} not found, returned None.", name);
+        return Handle<VkSemaphore>::NONE;
+    }
+
+    return iterator->second;
+}
+
+VkSemaphore& Vulkan::get_semaphore(const String& name)
+{
+    const auto& iterator = semaphoresNameMap.find(name);
+    if (iterator == semaphoresNameMap.end())
+    {
+        SPDLOG_ERROR("Semaphore {} not found, returned default.", name);
+        return semaphores[0];
+    }
+
+    return semaphores[iterator->second.id];
+}
+
+VkSemaphore& Vulkan::get_semaphore(const Handle<VkSemaphore> handle)
+{
+    if (handle.id >= semaphores.size())
+    {
+        SPDLOG_ERROR("Semaphore {} not found, returned default.", handle.id);
+        return semaphores[0];
+    }
+    return semaphores[handle.id];
+}
+
+const Handle<VkFence>& Vulkan::get_fence_handle(const String& name) const
+{
+    const auto& iterator = fencesNameMap.find(name);
+    if (iterator == fencesNameMap.end())
+    {
+        SPDLOG_ERROR("Fence handle {} not found, returned None.", name);
+        return Handle<VkFence>::NONE;
+    }
+
+    return iterator->second;
+}
+
+VkFence& Vulkan::get_fence(const String& name)
+{
+    const auto& iterator = fencesNameMap.find(name);
+    if (iterator == fencesNameMap.end())
+    {
+        SPDLOG_ERROR("Fence {} not found, returned default.", name);
+        return fences[0];
+    }
+
+    return fences[iterator->second.id];
+}
+
+VkFence& Vulkan::get_fence(const Handle<VkFence> handle)
+{
+    if (handle.id >= fences.size())
+    {
+        SPDLOG_ERROR("Fence {} not found, returned default.", handle.id);
+        return fences[0];
+    }
+    return fences[handle.id];
+}
+
+Vulkan::Image& Vulkan::get_image(const Handle<Image> handle)
+{
+    if (handle.id >= images.size())
+    {
+        SPDLOG_ERROR("Image {} not found, returned default.", handle.id);
+        return images[0];
+    }
+    return images[handle.id];
+}
+
+const Handle<Vulkan::Buffer>& Vulkan::get_buffer_handle(const String& name) const
+{
+    const auto& iterator = buffersNameMap.find(name);
+    if (iterator == buffersNameMap.end())
+    {
+        SPDLOG_ERROR("Buffer handle {} not found, returned None.", name);
+        return Handle<Buffer>::NONE;
+    }
+
+    return iterator->second;
+}
+
+Vulkan::Buffer& Vulkan::get_buffer(const Handle<Buffer> handle)
+{
+    if (handle.id >= buffers.size())
+    {
+        SPDLOG_ERROR("Buffer {} not found, returned default.", handle.id);
+        return buffers[0];
+    }
+    return buffers[handle.id];
+}
+
+Vulkan::Buffer& Vulkan::get_buffer(const String& name)
+{
+    const auto& iterator = buffersNameMap.find(name);
+    if (iterator == buffersNameMap.end())
+    {
+        SPDLOG_ERROR("Buffer {} not found, returned default.", name);
+        return buffers[0];
+    }
+
+    return buffers[iterator->second.id];
+}
+
+VkCommandPool& Vulkan::get_command_pool(const Handle<VkCommandPool> handle)
+{
+    if (handle.id >= commandPools.size())
+    {
+        SPDLOG_ERROR("Command pool {} not found, returned default.", handle.id);
+        return commandPools[0];
+    }
+    return commandPools[handle.id];
+}
+
+RenderPass& Vulkan::get_render_pass(const Handle<RenderPass> handle)
+{
+    if (handle.id >= renderPasses.size())
+    {
+        SPDLOG_ERROR("Render pass {} not found, returned default.", handle.id);
+        return renderPasses[0];
+    }
+    return renderPasses[handle.id];
+}
+
+DescriptorPool& Vulkan::get_descriptor_pool(const Handle<DescriptorPool> handle)
+{
+    if (handle.id >= descriptorPools.size())
+    {
+        SPDLOG_ERROR("Descriptor Pool {} not found, returned default.", handle.id);
+        return descriptorPools[0];
+    }
+    return descriptorPools[handle.id];
+}
+
+DescriptorPool& Vulkan::get_default_descriptor_pool()
+{
+    return descriptorPools[0];
 }
 
 Void Vulkan::create_vulkan_instance()
@@ -750,12 +1007,12 @@ Void Vulkan::create_vulkan_instance()
     }
 
     VkApplicationInfo appInfo{};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Ray Tracer";
+    appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pApplicationName   = "Ray Tracer";
     appInfo.applicationVersion = VK_MAKE_API_VERSION(0U, 1U, 0U, 0U);
-    appInfo.pEngineName = "RayEngine";
-    appInfo.engineVersion = VK_MAKE_API_VERSION(0U, 1U, 0U, 0U);
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+    appInfo.pEngineName        = "RayEngine";
+    appInfo.engineVersion      = VK_MAKE_API_VERSION(0U, 1U, 0U, 0U);
+    appInfo.apiVersion         = VK_MAKE_API_VERSION(0U, 1U, 3U, 0U);
 
     VkInstanceCreateInfo createInfo{};
     const DynamicArray<const Char*> extensions = get_required_extensions();
@@ -785,12 +1042,17 @@ Void Vulkan::create_vulkan_instance()
     }
 }
 
-Void Vulkan::create_surface()
+Void Vulkan::create_surface(Simulation<Vulkan>& simulation)
 {
-    // if (glfwCreateWindowSurface(instance, &displayManager.get_window(), nullptr, &surface) != VK_SUCCESS)
-    // {
-    //     throw std::runtime_error("failed to create window surface!");
-    // }
+    VkResult result = glfwCreateWindowSurface(instance, 
+                                              simulation.displayManager.get_current_window(), 
+                                              nullptr, 
+                                              &surface);
+    if (result != VK_SUCCESS)
+    {
+        SPDLOG_ERROR("failed to create window surface!");
+        simulation.shutdown();
+    }
 }
 
 DynamicArray<const Char*> Vulkan::get_required_extensions()
@@ -808,81 +1070,125 @@ DynamicArray<const Char*> Vulkan::get_required_extensions()
     return extensions;
 }
 
-Void Vulkan::setup_graphics_descriptors(const DynamicArray<Texture<Vulkan>>& textures)
+
+Void Vulkan::create_default_descriptors()
 {
+    DescriptorPool& descriptorPool = get_default_descriptor_pool();
+    descriptorPool.add_binding("TextureData",
+                               1,
+                               0,
+                               VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                               1,
+                               VK_SHADER_STAGE_FRAGMENT_BIT,
+                               VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+                               VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
+                               VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT);
+
+    descriptorPool.add_binding("ViewProjection",
+                               0,
+                               0,
+                               VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                               1,
+                               VK_SHADER_STAGE_VERTEX_BIT,
+                               VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+                               VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
+                               VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT);
+
+
+    descriptorPool.create_layouts(logicalDevice, nullptr);
+
+    DynamicArray<VkPushConstantRange> pushConstants;
+    VkPushConstantRange& vertexConstant = pushConstants.emplace_back();
+    vertexConstant.size = sizeof(VertexConstants);
+    vertexConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    descriptorPool.set_push_constants(pushConstants);
+}
+
+Void Vulkan::setup_default_descriptors(Simulation<Vulkan>& simulation)
+{
+    DescriptorPool& descriptorPool = get_default_descriptor_pool();
+
     DynamicArray<DescriptorResourceInfo> uniformResources;
     VkDescriptorBufferInfo& uniformBufferInfo = uniformResources.emplace_back().bufferInfos.emplace_back();
-    uniformBufferInfo.buffer = get_buffer(uniformBufferHandle).get_buffer();
+    uniformBufferInfo.buffer = get_buffer("DefaultUniformBuffer").get_buffer();
     uniformBufferInfo.offset = 0;
     uniformBufferInfo.range = sizeof(UniformBufferObject);
 
-    descriptorPool.add_set(descriptorPool.get_layout_data_handle_by_name("CameraDataLayout"),
+    descriptorPool.add_set(descriptorPool.get_layout_data_handle("ViewProjection"),
                            uniformResources,
-                           "GraphicsDescriptorSet");
+                           "Uniforms");
 
     DynamicArray<DescriptorResourceInfo> resources;
     DynamicArray<VkDescriptorImageInfo>& imageInfos = resources.emplace_back().imageInfos;
-    imageInfos.reserve(textures.size());
-    for (const Texture<Vulkan>& texture : textures)
-    {
-        Image& image = get_image(texture.imageHandle);
-        VkDescriptorImageInfo& imageInfo = imageInfos.emplace_back();
-        imageInfo.imageLayout = image.get_current_layout();
-        imageInfo.imageView   = image.get_view();
-        imageInfo.sampler     = image.get_sampler();
-    }
 
-    descriptorPool.add_set(descriptorPool.get_layout_data_handle_by_name("TexturesDataLayout"),
+    Handle<Texture<Vulkan>> textureHandle = simulation.resourceManager.get_default_material()[ETextureType::Albedo];
+    const Texture<Vulkan>& texture = simulation.resourceManager.get_texture(textureHandle);
+
+    Image& image = get_image(texture.imageHandle);
+    VkDescriptorImageInfo& imageInfo = imageInfos.emplace_back();
+    imageInfo.imageLayout = image.get_current_layout();
+    imageInfo.imageView   = image.get_view();
+    imageInfo.sampler     = image.get_sampler();
+
+    descriptorPool.add_set(descriptorPool.get_layout_data_handle("TextureData"),
                            resources,
-                           "Textures");
-
+                           "Texture");
 
     descriptorPool.create_sets(logicalDevice, nullptr);
 }
 
-Void Vulkan::recreate_swapchain()
+Void Vulkan::recreate_swapchain(Simulation<Vulkan>& simulation)
 {
-    // IVector2 windowSize = displayManager.get_framebuffer_size();
-    // while (windowSize.x < 1 || windowSize.y < 1)
-    // {
-    //     windowSize = displayManager.get_framebuffer_size();
-    //     glfwWaitEvents();
-    // }
-    //
-    // logicalDevice.wait_idle();
-    //
-    // swapchain.clear(logicalDevice, nullptr);
-    // swapchain.create(logicalDevice, physicalDevice, surface, nullptr);
-    // for (RenderPass& pass : renderPasses)
-    // {
-    //     pass.clear_framebuffers(logicalDevice, nullptr);
-    //     pass.clear_images(logicalDevice, nullptr);
-    //     pass.create_attachments(physicalDevice, logicalDevice, swapchain, nullptr);
-    //     pass.create_framebuffers(logicalDevice, swapchain, nullptr);
-    // }
+    IVector2 windowSize = simulation.displayManager.get_framebuffer_size();
+    while (windowSize.x < 1 || windowSize.y < 1)
+    {
+        windowSize = simulation.displayManager.get_framebuffer_size();
+        glfwWaitEvents();
+    }
+    
+    logicalDevice.wait_idle();
+    
+    swapchain.clear(logicalDevice, nullptr);
+    swapchain.create(logicalDevice, physicalDevice, surface, windowSize, nullptr);
+    for (RenderPass& pass : renderPasses)
+    {
+        pass.clear_framebuffers(logicalDevice, nullptr);
+        pass.clear_images(logicalDevice, nullptr);
+        pass.create_attachments(physicalDevice, logicalDevice, swapchain, nullptr);
+        pass.create_framebuffers(logicalDevice, swapchain, nullptr);
+    }
 }
 
-Void Vulkan::reload_shaders()
+Void Vulkan::reload_shaders(ShaderSet& shaderSet)
 {
     Bool result = true;
-    result &= get_shader("VShader").recreate(GLSL_COMPILER_PATH, logicalDevice, nullptr);
-    result &= get_shader("FShader").recreate(GLSL_COMPILER_PATH, logicalDevice, nullptr);
+    DynamicArray<Shader> pipelineShaders;
+    pipelineShaders.reserve(shaderSet.shaderHandles.size());
+    for (const Handle<ShaderVK> shaderHandle : shaderSet.shaderHandles)
+    {
+        Shader& shader = get_shader(shaderHandle);
+        result &= shader.recreate(logicalDevice, nullptr);
+        pipelineShaders.emplace_back(shader);
+    }
 
     if (!result)
     {
         SPDLOG_ERROR("Failed to reload shaders.");
         return;
     }
-    DynamicArray<Shader> shaders;
-    shaders.emplace_back(get_shader("VShader"));
-    shaders.emplace_back(get_shader("FShader"));
 
     logicalDevice.wait_idle();
-    graphicsPipeline.recreate_pipeline(descriptorPool,
-                                       get_render_pass(rasterizePass),
-                                       shaders,
-                                       logicalDevice,
-                                       nullptr);
+
+    const DescriptorPool& descriptorPool = get_descriptor_pool(shaderSet.descriptorPoolHandle);
+    const RenderPass& renderPass = get_render_pass(shaderSet.renderPassHandle);
+
+    Pipeline& pipeline = get_pipeline(shaderSet.pipelineHandle);
+    pipeline.create_graphics_pipeline(descriptorPool,
+                                      renderPass,
+                                      pipelineShaders,
+                                      logicalDevice,
+                                      nullptr);
 }
 
 Void Vulkan::resize_image(const UVector2& newSize, Handle<Image> image)
@@ -1157,8 +1463,18 @@ Void Vulkan::shutdown()
     }
     commandPools.clear();
 
-    descriptorPool.clear(logicalDevice, nullptr);
-    graphicsPipeline.clear(logicalDevice, nullptr);
+    for (DescriptorPool& descriptorPool : descriptorPools)
+    {
+        descriptorPool.clear(logicalDevice, nullptr);
+    }
+    descriptorPools.clear();
+
+    for (Pipeline& pipeline : pipelines)
+    {
+        pipeline.clear(logicalDevice, nullptr);
+    }
+    pipelines.clear();
+
     for (RenderPass& pass : renderPasses)
     {
         pass.clear(logicalDevice, nullptr);
@@ -1185,7 +1501,12 @@ Void Vulkan::shutdown()
         shader.clear(logicalDevice, nullptr);
     }
     shaders.clear();
+
+    shaderSets.clear();
+
     logicalDevice.clear(nullptr);
+
+    glslang::FinalizeProcess();
 
     if constexpr (DebugMessenger::ENABLE_VALIDATION_LAYERS)
     {

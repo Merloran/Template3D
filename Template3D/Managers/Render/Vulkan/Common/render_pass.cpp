@@ -3,7 +3,7 @@
 #include "physical_device.hpp"
 #include "logical_device.hpp"
 #include "swapchain.hpp"
-#include "image.hpp"
+#include "image_vk.hpp"
 
 #include <magic_enum.hpp>
 
@@ -42,17 +42,17 @@ Void RenderPass::create(const PhysicalDevice& physicalDevice, const LogicalDevic
     VkAttachmentReference colorAttachmentRef{};
     if (isMultiSampling)
     {
-	    colorAttachment.format         = swapchain.get_image_format();
-	    colorAttachment.samples        = this->samples;
-	    colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	    colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-	    colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	    colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-	    colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachment.format         = swapchain.get_image_format();
+        colorAttachment.samples        = this->samples;
+        colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	    colorAttachmentRef.attachment = UInt32(attachments.size());
-	    colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachmentRef.attachment = UInt32(attachments.size());
+        colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         attachments.push_back(colorAttachment);
         clearValues.emplace_back().color = { {0.0f, 0.0f, 0.0f, 1.0f} };
     }
@@ -61,17 +61,17 @@ Void RenderPass::create(const PhysicalDevice& physicalDevice, const LogicalDevic
     VkAttachmentReference depthAttachmentRef{};
     if (isDepthTest)
     {
-	    depthAttachment.format         = physicalDevice.find_depth_format();
-	    depthAttachment.samples        = this->samples;
-	    depthAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	    depthAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	    depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	    depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-	    depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depthAttachment.format         = physicalDevice.find_depth_format();
+        depthAttachment.samples        = this->samples;
+        depthAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         depthAttachmentRef.attachment = UInt32(attachments.size());
-	    depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         attachments.push_back(depthAttachment);
         clearValues.emplace_back().depthStencil = { 1.0f, 0 };
     }
@@ -184,7 +184,7 @@ VkRenderPass RenderPass::get_render_pass() const
     return renderPass;
 }
 
-const DynamicArray<Image>& RenderPass::get_images() const
+const DynamicArray<ImageVK>& RenderPass::get_images() const
 {
     return images;
 }
@@ -254,7 +254,7 @@ Void RenderPass::create_color_attachment(const PhysicalDevice& physicalDevice, c
 
 Void RenderPass::clear_images(const LogicalDevice& logicalDevice, const VkAllocationCallbacks* allocator)
 {
-    for (Image& image : images)
+    for (ImageVK& image : images)
     {
         image.clear(logicalDevice, allocator);
     }

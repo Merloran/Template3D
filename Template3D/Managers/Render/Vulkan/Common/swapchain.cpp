@@ -1,19 +1,17 @@
 #include "swapchain.hpp"
 
-#include "../../../Display/display_manager.hpp"
 #include "physical_device.hpp"
 #include "logical_device.hpp"
-#include "image.hpp"
-#include "render_pass.hpp"
+#include "image_vk.hpp"
 
 #include <magic_enum.hpp>
 
-Void Swapchain::create(const LogicalDevice& logicalDevice, const PhysicalDevice& physicalDevice, const VkSurfaceKHR& surface, const VkAllocationCallbacks* allocator)
+Void Swapchain::create(const LogicalDevice& logicalDevice, const PhysicalDevice& physicalDevice, const VkSurfaceKHR& surface, const IVector2& framebufferSize, const VkAllocationCallbacks* allocator)
 {
     const VkSurfaceCapabilitiesKHR& capabilities = physicalDevice.get_capabilities(surface);
     VkSurfaceFormatKHR surfaceFormat = choose_swap_surface_format(physicalDevice.get_formats(surface));
     VkPresentModeKHR   presentMode   = choose_swap_present_mode(physicalDevice.get_present_modes(surface));
-    extent                           = choose_swap_extent(capabilities);
+    extent                           = choose_swap_extent(capabilities, framebufferSize);
     UInt32             imageCount    = capabilities.minImageCount + 1;
 
     if (capabilities.maxImageCount > 0)
@@ -24,8 +22,8 @@ Void Swapchain::create(const LogicalDevice& logicalDevice, const PhysicalDevice&
     VkSwapchainCreateInfoKHR createInfo{};
     Array<UInt32, 2> queueFamilyIndices = 
     {
-    	physicalDevice.get_graphics_family_index(),
-    	physicalDevice.get_present_family_index()
+        physicalDevice.get_graphics_family_index(),
+        physicalDevice.get_present_family_index()
     };
 
     createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -102,12 +100,12 @@ Void Swapchain::create_image_views(const LogicalDevice& logicalDevice, const VkA
 
     for (UInt64 i = 0; i < imageViews.size(); ++i)
     {
-        imageViews[i] = Image::s_create_view(logicalDevice,
+        imageViews[i] = ImageVK::s_create_view(logicalDevice,
                                              images[i],
-											 imageFormat, 
-											 VK_IMAGE_ASPECT_COLOR_BIT, 
-											 1, 
-											 allocator);
+                                             imageFormat, 
+                                             VK_IMAGE_ASPECT_COLOR_BIT, 
+                                             1, 
+                                             allocator);
     }
 }
 
@@ -138,26 +136,23 @@ VkPresentModeKHR Swapchain::choose_swap_present_mode(const DynamicArray<VkPresen
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-UVector2 Swapchain::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities)
+UVector2 Swapchain::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities, const IVector2& framebufferSize)
 {
-    // if (capabilities.currentExtent.width != Limits<UInt32>::max())
-    // {
-    //     return UVector2{ capabilities.currentExtent.width, capabilities.currentExtent.height };
-    // } else {
-    //     DisplayManager& displayManager = DisplayManager::get();
-    //     const IVector2 size = displayManager.get_framebuffer_size();
-    //
-    //     UVector2 actualExtent = static_cast<UVector2>(size);
-    //
-    //     actualExtent.x = std::clamp(actualExtent.x,
-    //                                 capabilities.minImageExtent.width,
-    //                                 capabilities.maxImageExtent.width);
-    //     actualExtent.y = std::clamp(actualExtent.y,
-    //                                 capabilities.minImageExtent.height,
-    //                                 capabilities.maxImageExtent.height);
-    //
-    //     return actualExtent;
-    // }
+    if (capabilities.currentExtent.width != Limits<UInt32>::max())
+    {
+        return UVector2{ capabilities.currentExtent.width, capabilities.currentExtent.height };
+    } else {
+        UVector2 actualExtent = framebufferSize;
+    
+        actualExtent.x = std::clamp(actualExtent.x,
+                                    capabilities.minImageExtent.width,
+                                    capabilities.maxImageExtent.width);
+        actualExtent.y = std::clamp(actualExtent.y,
+                                    capabilities.minImageExtent.height,
+                                    capabilities.maxImageExtent.height);
+    
+        return actualExtent;
+    }
     return {};
 }
 

@@ -1,13 +1,13 @@
 ﻿#include "simulation.hpp"
 #include "Managers/Resource/resource_manager.hpp"
 #include "Managers/Display/display_manager.hpp"
-#include "Managers/Display/Common/glfw_api.hpp"
 #include "Managers/Render/OpenGL/opengl_api.hpp"
+#include "Managers/Render/Vulkan/vulkan_api.hpp"
 
 
 Int32 main()
 {
-    Simulation<OpenGL> simulation;
+    Simulation<Vulkan> simulation;
     // simulation.startup();
     simulation.displayManager.startup();
     DisplayManager& displayManager = simulation.displayManager;
@@ -15,7 +15,7 @@ Int32 main()
 
     displayManager.set_current_window(displayManager.create_preset_window("Template3D", 
                                                                                 { 1024, 768 }, 
-                                                                                EWindowPreset::OpenGL));
+                                                                                EWindowPreset::Vulkan));
     
     simulation.renderManager.startup(simulation);
     while (!displayManager.should_window_close())

@@ -19,6 +19,7 @@ public:
     Void create(const LogicalDevice& logicalDevice,
                 const PhysicalDevice& physicalDevice,
                 const VkSurfaceKHR& surface,
+                const IVector2& framebufferSize,
                 const VkAllocationCallbacks* allocator);
 
     const VkSwapchainKHR &get_swapchain() const;
@@ -35,5 +36,5 @@ private:
 
     VkSurfaceFormatKHR choose_swap_surface_format(const DynamicArray<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR choose_swap_present_mode(const DynamicArray<VkPresentModeKHR>& availablePresentModes);
-    UVector2 choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities);
+    UVector2 choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities, const IVector2& framebufferSize);
 };

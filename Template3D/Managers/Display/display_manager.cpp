@@ -30,7 +30,7 @@ Void DisplayManager::startup()
 	windowPresets[UInt64(EWindowPreset::Vulkan)] =
 	{
 		{ GLFW_CLIENT_API, GLFW_NO_API },
-		{ GLFW_RESIZABLE, GLFW_FALSE },
+		{ GLFW_RESIZABLE, GLFW_TRUE },
 	};
 
 	doesFramebufferResized = false;

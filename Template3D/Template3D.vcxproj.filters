@@ -30,7 +30,7 @@
     <ClCompile Include="Managers\Render\Vulkan\vulkan_api.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
-    <ClCompile Include="Managers\Render\Vulkan\Common\buffer.cpp">
+    <ClCompile Include="Managers\Render\Vulkan\Common\buffer_vk.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
     <ClCompile Include="Managers\Render\Vulkan\Common\command_buffer.cpp">
@@ -42,7 +42,7 @@
     <ClCompile Include="Managers\Render\Vulkan\Common\descriptor_pool.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
-    <ClCompile Include="Managers\Render\Vulkan\Common\image.cpp">
+    <ClCompile Include="Managers\Render\Vulkan\Common\image_vk.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
     <ClCompile Include="Managers\Render\Vulkan\Common\logical_device.cpp">
@@ -128,7 +128,7 @@
     <ClInclude Include="Managers\Render\Vulkan\vulkan_api.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-    <ClInclude Include="Managers\Render\Vulkan\Common\buffer.hpp">
+    <ClInclude Include="Managers\Render\Vulkan\Common\buffer_vk.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
     <ClInclude Include="Managers\Render\Vulkan\Common\command_buffer.hpp">
@@ -140,7 +140,7 @@
     <ClInclude Include="Managers\Render\Vulkan\Common\descriptor_pool.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-    <ClInclude Include="Managers\Render\Vulkan\Common\image.hpp">
+    <ClInclude Include="Managers\Render\Vulkan\Common\image_vk.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
     <ClInclude Include="Managers\Render\Vulkan\Common\logical_device.hpp">

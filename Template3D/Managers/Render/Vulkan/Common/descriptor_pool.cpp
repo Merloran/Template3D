@@ -47,8 +47,8 @@ Void DescriptorPool::create_layouts(const LogicalDevice& logicalDevice, const Vk
     {
         DescriptorLayoutData& data = layoutData[i];
 
-        auto iterator = nameToIdLayoutData.find(data.name);
-        if (iterator != nameToIdLayoutData.end())
+        auto iterator = layoutDataNameMap.find(data.name);
+        if (iterator != layoutDataNameMap.end())
         {
             SPDLOG_ERROR("Duplicated descriptor layout name: {}, descriptor layout skipped.", data.name);
             data.layout = VK_NULL_HANDLE;
@@ -62,7 +62,7 @@ Void DescriptorPool::create_layouts(const LogicalDevice& logicalDevice, const Vk
         }
 
         const Handle<DescriptorLayoutData> handle = { i };
-        nameToIdLayoutData[data.name] = handle;
+        layoutDataNameMap[data.name] = handle;
 
         VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags{};
         bindingFlags.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
@@ -86,13 +86,13 @@ Void DescriptorPool::create_layouts(const LogicalDevice& logicalDevice, const Vk
 
 Handle<DescriptorSetData> DescriptorPool::add_set(Handle<DescriptorLayoutData> layoutHandle, const DynamicArray<DescriptorResourceInfo>& resources, const String& name)
 {
-    if (nameToIdSetData.contains(name))
+    if (setDataNameMap.contains(name))
     {
         SPDLOG_ERROR("Failed to add descriptor set: {}. Descriptor set names must be unique.", name);
         return Handle<DescriptorSetData>::NONE;
     }
 
-    const DescriptorLayoutData& layout = get_layout_data_by_handle(layoutHandle);
+    const DescriptorLayoutData& layout = get_layout_data(layoutHandle);
     if (!are_resources_compatible(layout, resources))
     {
         SPDLOG_ERROR("Fail to add descriptor set: {}", name);
@@ -100,7 +100,7 @@ Handle<DescriptorSetData> DescriptorPool::add_set(Handle<DescriptorLayoutData> l
     }
 
     const Handle<DescriptorSetData> handle = { setData.size() };
-    nameToIdSetData[name] = handle;
+    setDataNameMap[name] = handle;
 
     DescriptorSetData& data = setData.emplace_back();
     data.name         = name;
@@ -112,20 +112,20 @@ Handle<DescriptorSetData> DescriptorPool::add_set(Handle<DescriptorLayoutData> l
     for (UInt64 i = 0; i < data.writes.size(); ++i)
     {
         VkWriteDescriptorSet& write = data.writes[i];
-	    write.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	    write.pNext            = nullptr;
+        write.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.pNext            = nullptr;
         write.dstArrayElement  = 0;
-	    write.dstBinding       = layout.bindings[i].binding;
-	    write.descriptorType   = layout.bindings[i].descriptorType;
+        write.dstBinding       = layout.bindings[i].binding;
+        write.descriptorType   = layout.bindings[i].descriptorType;
         write.descriptorCount  = UInt32(data.resources[i].bufferInfos.size()
                                + data.resources[i].imageInfos.size()
                                + data.resources[i].texelBufferViews.size());
-	    write.pBufferInfo      = data.resources[i].bufferInfos.data();
-	    write.pImageInfo       = data.resources[i].imageInfos.data();
-	    write.pTexelBufferView = data.resources[i].texelBufferViews.data();
+        write.pBufferInfo      = data.resources[i].bufferInfos.data();
+        write.pImageInfo       = data.resources[i].imageInfos.data();
+        write.pTexelBufferView = data.resources[i].texelBufferViews.data();
 
-	    VkDescriptorPoolSize& size = sizes.emplace_back();  
-	    size.type            = write.descriptorType; 
+        VkDescriptorPoolSize& size = sizes.emplace_back();  
+        size.type            = write.descriptorType; 
         size.descriptorCount = write.descriptorCount;
     }
     return handle;
@@ -152,9 +152,9 @@ Void DescriptorPool::create_sets(const LogicalDevice& logicalDevice, const VkAll
     layouts.reserve(setData.size());
     for (const DescriptorSetData& set : setData)
     {
-	    const UInt64 lastWriteIndex = set.writes.size() - 1;
+        const UInt64 lastWriteIndex = set.writes.size() - 1;
         counts.push_back(set.writes[lastWriteIndex].descriptorCount);
-        layouts.push_back(get_layout_data_by_handle(set.layoutHandle).layout);
+        layouts.push_back(get_layout_data(set.layoutHandle).layout);
     }
 
 
@@ -196,9 +196,9 @@ Void DescriptorPool::create_sets(const LogicalDevice& logicalDevice, const VkAll
 
 Void DescriptorPool::update_set(const LogicalDevice& logicalDevice, const DescriptorResourceInfo& data, Handle<DescriptorSetData> handle, UInt32 arrayElement, UInt64 binding)
 {
-	DescriptorSetData& set             = get_set_data_by_handle(handle);
+    DescriptorSetData& set             = get_set_data(handle);
     VkWriteDescriptorSet& write        = set.writes[binding];
-	const DescriptorLayoutData& layout = get_layout_data_by_handle(set.layoutHandle);
+    const DescriptorLayoutData& layout = get_layout_data(set.layoutHandle);
 
     write.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.pNext            = nullptr;
@@ -220,6 +220,11 @@ Void DescriptorPool::update_set(const LogicalDevice& logicalDevice, const Descri
                            nullptr);
 }
 
+Void DescriptorPool::update_set(const LogicalDevice& logicalDevice, const DescriptorResourceInfo& data, const String& descriptorSetName, UInt32 arrayElement, UInt64 binding)
+{
+    update_set(logicalDevice, data, get_set_data_handle(descriptorSetName), arrayElement, binding);
+}
+
 Void DescriptorPool::set_push_constants(const DynamicArray<VkPushConstantRange>& pushConstants)
 {
     this->pushConstants.reserve(pushConstants.size());
@@ -235,10 +240,10 @@ Void DescriptorPool::set_push_constants(const DynamicArray<VkPushConstantRange>&
     }
 }
 
-Handle<DescriptorLayoutData> DescriptorPool::get_layout_data_handle_by_name(const String& name) const
+Handle<DescriptorLayoutData> DescriptorPool::get_layout_data_handle(const String& name) const
 {
-    const auto& iterator = nameToIdLayoutData.find(name);
-    if (iterator == nameToIdLayoutData.end())
+    const auto& iterator = layoutDataNameMap.find(name);
+    if (iterator == layoutDataNameMap.end())
     {
         SPDLOG_ERROR("Layout data handle {} not found, returned None.", name);
         return Handle<DescriptorLayoutData>::NONE;
@@ -247,10 +252,10 @@ Handle<DescriptorLayoutData> DescriptorPool::get_layout_data_handle_by_name(cons
     return iterator->second;
 }
 
-DescriptorLayoutData& DescriptorPool::get_layout_data_by_name(const String& name)
+DescriptorLayoutData& DescriptorPool::get_layout_data(const String& name)
 {
-    const auto& iterator = nameToIdLayoutData.find(name);
-    if (iterator == nameToIdLayoutData.end() || iterator->second.id >= layoutData.size())
+    const auto& iterator = layoutDataNameMap.find(name);
+    if (iterator == layoutDataNameMap.end() || iterator->second.id >= layoutData.size())
     {
         SPDLOG_ERROR("Layout data {} not found, returned default.", name);
         return layoutData[0];
@@ -259,7 +264,7 @@ DescriptorLayoutData& DescriptorPool::get_layout_data_by_name(const String& name
     return layoutData[iterator->second.id];
 }
 
-DescriptorLayoutData& DescriptorPool::get_layout_data_by_handle(const Handle<DescriptorLayoutData> handle)
+DescriptorLayoutData& DescriptorPool::get_layout_data(const Handle<DescriptorLayoutData> handle)
 {
     if (handle.id >= layoutData.size())
     {
@@ -269,10 +274,10 @@ DescriptorLayoutData& DescriptorPool::get_layout_data_by_handle(const Handle<Des
     return layoutData[handle.id];
 }
 
-Handle<DescriptorSetData> DescriptorPool::get_set_data_handle_by_name(const String& name) const
+Handle<DescriptorSetData> DescriptorPool::get_set_data_handle(const String& name) const
 {
-    const auto& iterator = nameToIdSetData.find(name);
-    if (iterator == nameToIdSetData.end())
+    const auto& iterator = setDataNameMap.find(name);
+    if (iterator == setDataNameMap.end())
     {
         SPDLOG_ERROR("Set data handle {} not found, returned None.", name);
         return Handle<DescriptorSetData>::NONE;
@@ -281,10 +286,10 @@ Handle<DescriptorSetData> DescriptorPool::get_set_data_handle_by_name(const Stri
     return iterator->second;
 }
 
-DescriptorSetData& DescriptorPool::get_set_data_by_name(const String& name)
+DescriptorSetData& DescriptorPool::get_set_data(const String& name)
 {
-    const auto& iterator = nameToIdSetData.find(name);
-    if (iterator == nameToIdSetData.end() || iterator->second.id >= setData.size())
+    const auto& iterator = setDataNameMap.find(name);
+    if (iterator == setDataNameMap.end() || iterator->second.id >= setData.size())
     {
         SPDLOG_ERROR("Set data {} not found, returned default.", name);
         return setData[0];
@@ -293,7 +298,7 @@ DescriptorSetData& DescriptorPool::get_set_data_by_name(const String& name)
     return setData[iterator->second.id];
 }
 
-DescriptorSetData& DescriptorPool::get_set_data_by_handle(const Handle<DescriptorSetData> handle)
+DescriptorSetData& DescriptorPool::get_set_data(const Handle<DescriptorSetData> handle)
 {
     if (handle.id >= setData.size())
     {
@@ -331,53 +336,53 @@ Bool DescriptorPool::are_resources_compatible(const DescriptorLayoutData& layout
     {
         const VkDescriptorSetLayoutBinding& binding = layout.bindings[i];
         const DescriptorResourceInfo& resource = resources[i];
-	    switch(binding.descriptorType)
-	    {
-	        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-	        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-	        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-	        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-	        case VK_DESCRIPTOR_TYPE_SAMPLER:
-	        {
+        switch(binding.descriptorType)
+        {
+            case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+            case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+            case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+            case VK_DESCRIPTOR_TYPE_SAMPLER:
+            {
                 const UInt32 imagesCount = UInt32(resource.imageInfos.size());
-	            if (resource.imageInfos.empty() || imagesCount > binding.descriptorCount)
-	            {
+                if (resource.imageInfos.empty() || imagesCount > binding.descriptorCount)
+                {
                     SPDLOG_ERROR("Images {} size {} does not fit in binding descriptor count {}", i, imagesCount, binding.descriptorCount);
-	                return false;
-	            }
+                    return false;
+                }
                 break;
-	        }
+            }
 
-	        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-	        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-	        {
+            case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+            case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+            {
                 const UInt32 buffersCount = UInt32(resource.texelBufferViews.size());
-	            if (resource.texelBufferViews.empty() || buffersCount > binding.descriptorCount)
-	            {
+                if (resource.texelBufferViews.empty() || buffersCount > binding.descriptorCount)
+                {
                     SPDLOG_ERROR("Texel views {} size {} does not fit in binding descriptor count {}", i, buffersCount, binding.descriptorCount);
-	                return false;
-	            }
+                    return false;
+                }
                 break;
-	        }
+            }
 
-	        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-	        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-	        {
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+            {
                 const UInt32 buffersCount = UInt32(resource.texelBufferViews.size());
-	            if (resource.bufferInfos.empty() || buffersCount > binding.descriptorCount)
-	            {
+                if (resource.bufferInfos.empty() || buffersCount > binding.descriptorCount)
+                {
                     SPDLOG_ERROR("Buffers {} size {} does not fit in binding descriptor count {}", i, buffersCount, binding.descriptorCount);
-	                return false;
-	            }
+                    return false;
+                }
                 break;
-	        }
+            }
 
             default:
-		    {
+            {
                 SPDLOG_ERROR("Not supported descriptor type: {}", magic_enum::enum_name(binding.descriptorType));
                 return false;
-		    }
-	    }
+            }
+        }
     }
     return true;
 }

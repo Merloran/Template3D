@@ -22,7 +22,7 @@ Void OpenGL::startup(Simulation<OpenGL>& simulation)
         return;
     }
 
-    // Create default shaders
+    // Create default shaders and render data
     {
         String vertCode = "#version 460 core											\n"
                           "layout(location = 0) in vec3 position;						\n"
@@ -79,7 +79,7 @@ Void OpenGL::startup(Simulation<OpenGL>& simulation)
         ShaderSet defaultSet;
         defaultSet.shaderHandles.push_back(create_shader(vertCode, "Default", EShaderType::Vertex));
         defaultSet.shaderHandles.push_back(create_shader(fragCode, "Default", EShaderType::Fragment));
-        create_pipeline(defaultSet);
+        defaultSet.pipelineHandle = create_pipeline(defaultSet);
         simulation.resourceManager.get_default_material().shaderSetHandle = create_shader_set(defaultSet);
         create_model_render_data(simulation, simulation.resourceManager.get_default_model());
     }
@@ -97,14 +97,15 @@ Void OpenGL::startup(Simulation<OpenGL>& simulation)
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
+    glFrontFace(GL_CW);
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 Void OpenGL::draw_model(Simulation<OpenGL>& simulation, const Model<OpenGL>& model)
 {
-
+    IVector2 size = simulation.displayManager.get_framebuffer_size();
+    glViewport(0, 0, size.x, size.y);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     for (Int32 i = 0; i < model.meshes.size(); i++)
     {
@@ -113,11 +114,9 @@ Void OpenGL::draw_model(Simulation<OpenGL>& simulation, const Model<OpenGL>& mod
         Buffer vao = get_array(mesh.vertexesHandle);
         Pipeline& pipeline = get_pipeline(material.shaderSetHandle);
         pipeline.bind();
-        FMatrix4 modelMatrix = FMatrix4(1.0f);
         static Float32 rot = 0.0f;
-        rot += 0.02f;
-        modelMatrix = glm::rotate(modelMatrix, glm::radians(rot), FVector3(0.0f, 1.0f, 0.0f));
-
+        FMatrix4 modelMatrix = glm::rotate(FMatrix4(1.0f), glm::radians(rot), { 0.0f, 1.0f, 0.0f });
+        rot += 0.01f;
         FMatrix4 projectionMatrix = glm::perspective(glm::radians(70.0f),
                                                      simulation.displayManager.get_aspect_ratio(), 
                                                      0.001f, 
@@ -252,7 +251,7 @@ Handle<OpenGL::Shader> OpenGL::create_shader(const String& shaderCode, const Str
     return handle;
 }
 
-Handle<OpenGL::Pipeline> OpenGL::create_pipeline(ShaderSet& shaderSet)
+Handle<OpenGL::Pipeline> OpenGL::create_pipeline(const ShaderSet& shaderSet)
 {
     const UInt64 pipelineId = pipelines.size();
     Pipeline& pipeline = pipelines.emplace_back();
@@ -273,7 +272,6 @@ Handle<OpenGL::Pipeline> OpenGL::create_pipeline(ShaderSet& shaderSet)
     }
 
     const Handle<Pipeline> handle{ pipelineId };
-    shaderSet.pipelineHandle = handle;
     return handle;
 }
 

@@ -143,6 +143,7 @@
       <DisableAnalyzeExternal>true</DisableAnalyzeExternal>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -166,6 +167,7 @@
       <DisableAnalyzeExternal>true</DisableAnalyzeExternal>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -186,11 +188,11 @@
     <ClCompile Include="Managers\Render\OpenGL\Common\pipeline_gl.cpp" />
     <ClCompile Include="Managers\Render\OpenGL\Common\shader_gl.cpp" />
     <ClCompile Include="Managers\Render\OpenGL\opengl_api.cpp" />
-    <ClCompile Include="Managers\Render\Vulkan\Common\buffer.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\buffer_vk.cpp" />
     <ClCompile Include="Managers\Render\Vulkan\Common\command_buffer.cpp" />
     <ClCompile Include="Managers\Render\Vulkan\Common\debug_messenger.cpp" />
     <ClCompile Include="Managers\Render\Vulkan\Common\descriptor_pool.cpp" />
-    <ClCompile Include="Managers\Render\Vulkan\Common\image.cpp" />
+    <ClCompile Include="Managers\Render\Vulkan\Common\image_vk.cpp" />
     <ClCompile Include="Managers\Render\Vulkan\Common\logical_device.cpp" />
     <ClCompile Include="Managers\Render\Vulkan\Common\physical_device.cpp" />
     <ClCompile Include="Managers\Render\Vulkan\Common\pipeline_vk.cpp" />
@@ -214,11 +216,11 @@
     <ClInclude Include="Managers\Render\OpenGL\Common\shader_set_gl.hpp" />
     <ClInclude Include="Managers\Render\OpenGL\opengl_api.hpp" />
     <ClInclude Include="Managers\Render\render_manager.hpp" />
-    <ClInclude Include="Managers\Render\Vulkan\Common\buffer.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\buffer_vk.hpp" />
     <ClInclude Include="Managers\Render\Vulkan\Common\command_buffer.hpp" />
     <ClInclude Include="Managers\Render\Vulkan\Common\debug_messenger.hpp" />
     <ClInclude Include="Managers\Render\Vulkan\Common\descriptor_pool.hpp" />
-    <ClInclude Include="Managers\Render\Vulkan\Common\image.hpp" />
+    <ClInclude Include="Managers\Render\Vulkan\Common\image_vk.hpp" />
     <ClInclude Include="Managers\Render\Vulkan\Common\logical_device.hpp" />
     <ClInclude Include="Managers\Render\Vulkan\Common\physical_device.hpp" />
     <ClInclude Include="Managers\Render\Vulkan\Common\pipeline_vk.hpp" />

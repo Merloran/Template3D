@@ -12,9 +12,9 @@ Void LogicalDevice::create(const PhysicalDevice& physicalDevice, const DebugMess
     DynamicArray<VkDeviceQueueCreateInfo> queueCreateInfos;
     Set<UInt32> uniqueQueueFamilies = 
     {
-    	physicalDevice.get_graphics_family_index(),
-    	physicalDevice.get_compute_family_index(),
-    	physicalDevice.get_present_family_index()
+        physicalDevice.get_graphics_family_index(),
+        physicalDevice.get_compute_family_index(),
+        physicalDevice.get_present_family_index()
     };
     
     Array<Float32, 2> priorities = { 1.0f, 1.0f };
@@ -38,7 +38,7 @@ Void LogicalDevice::create(const PhysicalDevice& physicalDevice, const DebugMess
     VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
     descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
     descriptorIndexingFeatures.pNext = &robustness2Features;
-	descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing     = VK_TRUE;
+    descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing     = VK_TRUE;
     descriptorIndexingFeatures.descriptorBindingStorageImageUpdateAfterBind  = VK_TRUE;
     descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind  = VK_TRUE;
     descriptorIndexingFeatures.shaderUniformBufferArrayNonUniformIndexing    = VK_TRUE;
@@ -98,7 +98,7 @@ VkResult LogicalDevice::acquire_next_image(Swapchain& swapchain, VkSemaphore sem
                                                   fence,
                                                   &imageIndex);
     swapchain.set_image_index(imageIndex);
-	if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
     {
         SPDLOG_ERROR("Acquire image failed with: {}", magic_enum::enum_name(result));
     }

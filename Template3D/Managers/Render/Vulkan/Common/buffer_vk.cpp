@@ -1,9 +1,9 @@
-#include "buffer.hpp"
+#include "buffer_vk.hpp"
 
 #include "logical_device.hpp"
 #include "physical_device.hpp"
 
-Void Buffer::create(const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const VkAllocationCallbacks* allocator)
+Void BufferVK::create(const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const VkAllocationCallbacks* allocator)
 {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -33,27 +33,27 @@ Void Buffer::create(const PhysicalDevice& physicalDevice, const LogicalDevice& l
     vkBindBufferMemory(logicalDevice.get_device(), buffer, memory, 0);
 }
 
-VkBuffer Buffer::get_buffer() const
+VkBuffer BufferVK::get_buffer() const
 {
     return buffer;
 }
 
-VkDeviceMemory Buffer::get_memory() const
+VkDeviceMemory BufferVK::get_memory() const
 {
     return memory;
 }
 
-Void** Buffer::get_mapped_memory()
+Void** BufferVK::get_mapped_memory()
 {
     return &mappedMemory;
 }
 
-UInt64 Buffer::get_size() const
+UInt64 BufferVK::get_size() const
 {
     return size;
 }
 
-Void Buffer::clear(const LogicalDevice& logicalDevice, const VkAllocationCallbacks* allocator)
+Void BufferVK::clear(const LogicalDevice& logicalDevice, const VkAllocationCallbacks* allocator)
 {
     vkDestroyBuffer(logicalDevice.get_device(), buffer, allocator);
     vkFreeMemory(logicalDevice.get_device(), memory, allocator);

@@ -3,7 +3,7 @@
 template <typename GraphicsAPI>
 class Simulation;
 template <typename GraphicsAPI>
-class Model;
+struct Model;
 
 template <typename Type>
 concept GraphicsAPI = requires(Type api, Simulation<Type> &simulation, Model<Type> &model)

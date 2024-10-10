@@ -23,11 +23,11 @@ public:
     [[nodiscard]]
     VkPhysicalDevice get_device() const;
     [[nodiscard]]
-	UInt32 get_graphics_family_index() const;
+    UInt32 get_graphics_family_index() const;
     [[nodiscard]]
-	UInt32 get_compute_family_index() const;
+    UInt32 get_compute_family_index() const;
     [[nodiscard]]
-	UInt32 get_present_family_index() const;
+    UInt32 get_present_family_index() const;
     [[nodiscard]]
     VkSampleCountFlagBits get_max_samples() const;
     [[nodiscard]]
@@ -42,13 +42,13 @@ public:
     const DynamicArray<const Char*> &get_device_extensions() const;
     [[nodiscard]]
     VkFormat find_depth_format() const;
-	[[nodiscard]]
+    [[nodiscard]]
     VkFormat find_supported_format(const std::vector<VkFormat>& candidates,
                                    VkImageTiling tiling,
                                    VkFormatFeatureFlags features) const;
-	[[nodiscard]]
+    [[nodiscard]]
     VkFormatProperties get_format_properties(VkFormat format) const;
-	[[nodiscard]]
+    [[nodiscard]]
     UInt32 find_memory_type(UInt32 typeFilter, VkMemoryPropertyFlags properties) const;
 
     template <typename FeatureType>
@@ -71,12 +71,12 @@ public:
         const UInt32 firstFeatureOffset = 4; // sType is 4 bytes but it is before void* so it is aligned to 8 bytes
         for (UInt32 i = firstFeatureOffset; i < elementsCount; ++i)
         {
-	        if (requestedFeature[i] > supportedFeature[i])
-	        {
+            if (requestedFeature[i] > supportedFeature[i])
+            {
                 //TODO: think how to get name of feature(structure field)
                 SPDLOG_ERROR("Feature {} in order not supported!", (i - firstFeatureOffset));
                 result = false;
-	        }
+            }
         }
 
         return result;

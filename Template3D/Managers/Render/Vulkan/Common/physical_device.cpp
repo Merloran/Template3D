@@ -215,7 +215,7 @@ Void PhysicalDevice::setup_max_sample_count()
 {
     vkGetPhysicalDeviceProperties(device, &properties);
     VkSampleCountFlags counts = properties.limits.framebufferColorSampleCounts
-							  & properties.limits.framebufferDepthSampleCounts;
+                              & properties.limits.framebufferDepthSampleCounts;
 
 
     if (counts & VK_SAMPLE_COUNT_64_BIT)

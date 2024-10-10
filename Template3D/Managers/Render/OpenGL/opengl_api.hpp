@@ -44,7 +44,7 @@ public:
     Handle<Shader> create_shader(const String& filePath, EShaderType type);
     Handle<Shader> create_shader(const String& shaderCode, const String& shaderName, EShaderType type);
 
-    Handle<Pipeline> create_pipeline(ShaderSet& shaderSet);
+    Handle<Pipeline> create_pipeline(const ShaderSet& shaderSet);
     Handle<ShaderSet> create_shader_set(const ShaderSet& shaderSet);
 
     Void create_model_render_data(Simulation<OpenGL>& simulation, Model<OpenGL>& model);

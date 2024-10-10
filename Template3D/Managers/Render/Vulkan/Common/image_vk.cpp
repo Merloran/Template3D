@@ -1,9 +1,9 @@
-#include "image.hpp"
+#include "image_vk.hpp"
 
 #include "physical_device.hpp"
 #include "logical_device.hpp"
 
-Void Image::create(const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice, const UVector2& size, UInt32 mipLevel, VkSampleCountFlagBits samplesCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageAspectFlags aspectFlags, const VkAllocationCallbacks* allocator)
+Void ImageVK::create(const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice, const UVector2& size, UInt32 mipLevel, VkSampleCountFlagBits samplesCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageAspectFlags aspectFlags, const VkAllocationCallbacks* allocator)
 {
     if (!(physicalDevice.get_format_properties(format).optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
     {
@@ -59,7 +59,7 @@ Void Image::create(const PhysicalDevice& physicalDevice, const LogicalDevice& lo
     create_view(logicalDevice, aspectFlags, allocator);
 }
 
-Void Image::create_view(const LogicalDevice& logicalDevice, VkImageAspectFlags aspectFlags, const VkAllocationCallbacks* allocator)
+Void ImageVK::create_view(const LogicalDevice& logicalDevice, VkImageAspectFlags aspectFlags, const VkAllocationCallbacks* allocator)
 {
     this->aspectFlags = aspectFlags;
     VkImageViewCreateInfo viewInfo{};
@@ -79,7 +79,7 @@ Void Image::create_view(const LogicalDevice& logicalDevice, VkImageAspectFlags a
     }
 }
 
-Void Image::create_sampler(const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice, const VkAllocationCallbacks* allocator)
+Void ImageVK::create_sampler(const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice, const VkAllocationCallbacks* allocator)
 {
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -114,62 +114,62 @@ Void Image::create_sampler(const PhysicalDevice& physicalDevice, const LogicalDe
     }
 }
 
-Void Image::resize(const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice, const UVector2& size, const VkAllocationCallbacks* allocator)
+Void ImageVK::resize(const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice, const UVector2& size, const VkAllocationCallbacks* allocator)
 {
     // To prevent clearing sampler to reuse it
-	const VkSampler holder = sampler;
+    const VkSampler holder = sampler;
     sampler = nullptr;
     clear(logicalDevice, allocator);
     create(physicalDevice, logicalDevice, size, mipLevel, samplesCount, format, tiling, usage, properties, aspectFlags, allocator);
     sampler = holder;
 }
 
-VkImage Image::get_image() const
+VkImage ImageVK::get_image() const
 {
     return image;
 }
 
-VkFormat Image::get_format() const
+VkFormat ImageVK::get_format() const
 {
     return format;
 }
 
-VkImageView Image::get_view() const
+VkImageView ImageVK::get_view() const
 {
     return view;
 }
 
-VkSampler Image::get_sampler() const
+VkSampler ImageVK::get_sampler() const
 {
     return sampler;
 }
 
-UInt32 Image::get_mip_level() const
+UInt32 ImageVK::get_mip_level() const
 {
     return mipLevel;
 }
 
-const UVector2& Image::get_size() const
+const UVector2& ImageVK::get_size() const
 {
     return size;
 }
 
-VkImageLayout Image::get_current_layout() const
+VkImageLayout ImageVK::get_current_layout() const
 {
     return currentLayout;
 }
 
-VkImageAspectFlags Image::get_aspect_flags() const
+VkImageAspectFlags ImageVK::get_aspect_flags() const
 {
     return aspectFlags;
 }
 
-Void Image::set_current_layout(VkImageLayout layout)
+Void ImageVK::set_current_layout(VkImageLayout layout)
 {
     currentLayout = layout;
 }
 
-VkImageView Image::s_create_view(const LogicalDevice& logicalDevice, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, UInt32 mipLevel, const VkAllocationCallbacks* allocator)
+VkImageView ImageVK::s_create_view(const LogicalDevice& logicalDevice, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, UInt32 mipLevel, const VkAllocationCallbacks* allocator)
 {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -190,7 +190,7 @@ VkImageView Image::s_create_view(const LogicalDevice& logicalDevice, VkImage ima
     return view;
 }
 
-Void Image::clear(const LogicalDevice& logicalDevice, const VkAllocationCallbacks* allocator)
+Void ImageVK::clear(const LogicalDevice& logicalDevice, const VkAllocationCallbacks* allocator)
 {
     if (sampler != nullptr)
     {

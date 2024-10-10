@@ -113,7 +113,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessenger::s_debug_callback(VkDebugUtilsMess
 
 Void DebugMessenger::clear(VkInstance& instance, const VkAllocationCallbacks* allocator)
 {
-	const auto function = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
+    const auto function = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
     if (function != nullptr)
     {
         function(instance, debugMessenger, allocator);
