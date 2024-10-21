@@ -19,6 +19,11 @@ public:
         api.draw_model(simulation, model);
     }
 
+    API& get_api()
+    {
+        return api;
+    }
+
     Void shutdown()
     {
         SPDLOG_INFO("Render Manager shutdown.");

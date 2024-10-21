@@ -1,0 +1,14 @@
+{
+  "name": "template-project",
+  "version-string": "1.0.0",
+  "dependencies": [
+    "glm",
+	"spdlog",
+	"tinygltf",
+	"vulkan",
+	"glfw3",
+	"magic-enum",
+	"glad",
+	"glslang"
+  ]
+}
