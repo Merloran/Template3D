@@ -1,6 +1,6 @@
 #pragma once
 #include "Common/vertex.hpp"
-#include "../Render/Common/graphics_api_concept.hpp"
+#include "Render/Common/graphics_api_concept.hpp"
 
 
 struct Color;

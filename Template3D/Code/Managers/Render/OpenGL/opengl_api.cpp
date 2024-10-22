@@ -1,11 +1,11 @@
 #include "opengl_api.hpp"
 
-#include "../../Resource/Common/model.hpp"
-#include "../../Resource/Common/mesh.hpp"
-#include "../../Resource/Common/texture.hpp"
-#include "../../Resource/Common/material.hpp"
+#include "Resource/Common/model.hpp"
+#include "Resource/Common/mesh.hpp"
+#include "Resource/Common/texture.hpp"
+#include "Resource/Common/material.hpp"
 
-#include "../Core/simulation.hpp"
+#include "simulation.hpp"
 
 #include <filesystem>
 #include <magic_enum.hpp>

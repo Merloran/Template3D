@@ -1,6 +1,6 @@
 #pragma once
-#include "../Managers/Render/Common/graphics_api_concept.hpp"
-#include "../Managers/Display/display_manager.hpp"
+#include "Render/Common/graphics_api_concept.hpp"
+#include "Display/display_manager.hpp"
 
 template <GraphicsAPI GraphicsType>
 class ResourceManager;

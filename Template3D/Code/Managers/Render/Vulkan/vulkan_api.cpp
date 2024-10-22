@@ -1,9 +1,9 @@
 #include "vulkan_api.hpp"
 
-#include "../../Resource/Common/material.hpp"
-#include "../../Resource/Common/texture.hpp"
-#include "../../Resource/Common/mesh.hpp"
-#include "../../Resource/Common/model.hpp"
+#include "Resource/Common/material.hpp"
+#include "Resource/Common/texture.hpp"
+#include "Resource/Common/mesh.hpp"
+#include "Resource/Common/model.hpp"
 
 #include <filesystem>
 #include <GLFW/glfw3.h>

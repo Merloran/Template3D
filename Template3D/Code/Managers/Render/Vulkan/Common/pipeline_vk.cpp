@@ -4,7 +4,7 @@
 #include "descriptor_pool.hpp"
 #include "render_pass.hpp"
 #include "shader_vk.hpp"
-#include "../Managers/Resource/Common/vertex.hpp"
+#include "Resource/Common/vertex.hpp"
 
 #include <magic_enum.hpp>
 

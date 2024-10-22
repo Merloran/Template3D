@@ -17,10 +17,18 @@ find_package(glad CONFIG REQUIRED)
 find_package(glslang CONFIG REQUIRED)
 
 add_executable(Template3D
-               Code/main.cpp
-			   Code/Core/Utilities/pch.cpp)
+               Code/main.cpp)
 
 add_subdirectory(Code)
+
+# Create visual studio filters
+file(GLOB_RECURSE _source_list *.cpp* *.h* *.hpp* *.inl*)
+foreach(_source IN ITEMS ${_source_list})
+    get_filename_component(_source_path "${_source}" PATH)
+    string(REPLACE "${CMAKE_SOURCE_DIR}/Code" "" _group_path "${_source_path}")
+    string(REPLACE "/" "\\" _group_path "${_group_path}")
+    source_group("Project\\${_group_path}" FILES "${_source}")
+endforeach()
 
 
 target_compile_options(Template3D PRIVATE /utf-8)

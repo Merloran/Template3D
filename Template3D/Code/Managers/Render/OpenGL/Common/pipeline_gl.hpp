@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Common/pipeline_type.hpp"
+#include "Render/Common/pipeline_type.hpp"
 
 class DescriptorPool;
 class RenderPass;

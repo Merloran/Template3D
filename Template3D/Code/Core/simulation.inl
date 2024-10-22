@@ -1,7 +1,8 @@
 #pragma once
 #include "simulation.hpp"
-#include "../Managers/Render/render_manager.hpp"
-#include "../Managers/Resource/resource_manager.hpp"
+// Do not remove this includes, even if intellisense screaming about it
+#include "Render/render_manager.hpp"
+#include "Resource/resource_manager.hpp"
 
 template <typename GraphicsAPI>
 Void Simulation<GraphicsAPI>::startup()
